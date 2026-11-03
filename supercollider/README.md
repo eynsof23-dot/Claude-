@@ -21,30 +21,33 @@ on a single 16th-note grid with polyrhythms.
 | 1:51 | **Conjuration.** The peak: industrial noise bed, tortured bowed metal, clank backbeat |
 | 2:43 | **Closing.** The beat leaves, echo tails, tolls; the tape wobbles and fades |
 
-**Kick:** a clean sub, an FM "tok" that feeds the Sherman and a tempo
-echo, and a distortion layer for the mental-tekno grit. Drive and distortion
-change on every step and are automated per section. The pattern is a
-polymeter: half-time in the procession, 3-3-2-2 (10 steps) in the rite,
-4-4-3-3 (14 steps) in the first half of the peak, straight four only at the
-climax. The bar downbeats are always anchored.
+**Kick:** a clean sub, an FM "tok" (loud only in the half-time procession,
+where it feeds the Sherman and a tempo echo) and a low, warm distortion
+layer (40-900 Hz). Drive and distortion change on every step and are
+automated per section. The pattern is a polymeter: 3-3-2-2 (10 steps) in
+the rite, 4-4-3-3 (14 steps) in the first half of the peak, straight four
+only at the climax. The bar downbeats are always anchored. The kick owns
+everything below 55 Hz.
 
-**Bass (sparse, never rolling):** distorted sub booms that glide, bend and
-ring a short comb (20-step cycle); FM growls with tempo-locked wah,
-pulse-width wobble, pitch bends and auto-pan (2-in-11); flanged, wobbling
-drone swells. They all run through a bass bus: compression, parallel mid
-grit (so they're heard on phones), distortion, mono lows, a kick duck.
+**Bass (sparse, fixed pitch, no sweeps):** distorted sub booms with a short
+comb ring (20-step cycle), FM growls (2-in-11) and drone swells. They all
+run through a bass bus: high-pass at 55 Hz, compression, parallel mid grit
+(heard on phones), distortion, mono lows, and a heavy duck under the kick.
 
-**Bass screeches:** resonant filter swells on the root and sub-octave. The
-cutoff climbs from about 50 Hz to about 1 kHz as the resonance tightens and
-the volume grows, then it cuts on the downbeat. The real Sherman's cutoff
-and resonance swell in sync.
+**Industrial bass screeches:** a grinding bass tone whose fixed resonances
+(the root's 3rd, 5th, 7th, 9th and 13th harmonics) ring louder and tighter
+while noise, crackle and distortion grow. Nothing sweeps, so nothing shifts
+in pitch. It cuts on the downbeat, while the Sherman's resonance and drive
+swell in sync.
 
 **Hats:** sparse Euclidean cycles (closed 5-in-13, open 3-in-11, ghost
-3-in-7), with colour and length changing per step.
+3-in-7), with colour and length changing per step. Every pattern is fixed:
+there are no random hits.
 
-**Space:** auto-pan on the hats, percussion, swells and growls; a flanger on
-the Sherman return and the bass drones; an unsynced delay (311 / 467 ms) on
-the percussion and metal.
+**Space:** a short room for everything, a short plate for the drums, a long
+hall only for the atmospheres. Tempo echoes are used sparingly, and an
+unsynced delay (311 / 467 ms) goes on just a few hits. The atmosphere bus
+moves slowly: rotating stereo image, drifting tone, breathing level.
 
 **Sherman-style filterbank:** a driven resonant low-pass into a band-pass.
 The cutoff follows an envelope follower, a 7-sixteenth LFO and a random step
