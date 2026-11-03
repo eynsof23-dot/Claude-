@@ -1,13 +1,13 @@
-// RITE — ceremonial electroacoustic / death-industrial / mental tekno piece, 3:00 at 112 BPM.
+// RITE — ceremonial electroacoustic / death-industrial / mental tekno piece, 3:03 at 110 BPM.
 //
 //   bars  0-8   0:00  INVOCATION    gong swell, bell tolls, the chant begins
 //   bars  8-24  0:17  PROCESSION    frame drums + ritual bells in polyrhythm, half-time kick,
 //                                   dub bass teaser, first braam
-//   bars 24-48  0:51  THE RITE      kick + bass talking (with tape echo), metal & drum polymeters,
+//   bars 24-48  0:52  THE RITE      kick + bass talking (with tape echo), metal & drum polymeters,
 //                                   braams, tom roll
-//   bars 48-52  1:43  THE VOID      cut: gong, bells, full choir
-//   bars 52-76  1:51  CONJURATION   the peak: industrial noise bed, tortured metal, clank backbeat
-//   bars 76-84  2:43  CLOSING       beat leaves, echo tails, tolls, the tape degrades and fades
+//   bars 48-52  1:45  THE VOID      cut: gong, bells, full choir
+//   bars 52-76  1:53  CONJURATION   the peak: industrial noise bed, tortured metal, clank backbeat
+//   bars 76-84  2:46  CLOSING       beat leaves, echo tails, tolls, the tape degrades and fades
 //
 // MIX. Everything plays into ONE shared space: a short room, then a shared
 // console saturation, then the tape (pre/de-emphasis, asymmetric drive,
@@ -49,19 +49,19 @@
 //       -> MASTER: tape, de-harsh EQ, 3-band multiband compression, limiter
 //
 // Render:  SEED=1 OUT=rite.wav sclang rite.scd      (SOLO=<layer> for stems:
-//          kick bass cymbals whales sherman hats sparse screech braam metal chant perc noise sub detritus grains)
+//          kick bass cymbals whales sherman hats sparse grit screech braam metal chant perc noise sub detritus grains)
 
 (
 var seed = ("SEED".getenv ? "1").asInteger;
 var solo = "SOLO".getenv;
 var outPath = "OUT".getenv ? (thisProcess.nowExecutingPath.dirname +/+ "rite.wav");
-var bpm = 112, stepDur = 15 / bpm, bars = 84, total = bars * 16 * stepDur;
+var bpm = 110, stepDur = 15 / bpm, bars = 84, total = bars * 16 * stepDur;
 var busSpace = 16, busHall = 18, busGrain = 20, busBass = 22, busMix = 24, ctlDuck = 10;
 var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44, busKick = 46, busKickM = 48, busKsat = 50, busRoom = 52;
 var busSdel = busBass;  // the old bass echo bus now carries the screech echo
 var opts, server, score, defs, add, set, on, pw, euclid, metalSpec, root, field, pick, at;
 var wdel, whd, satbus, lowP, ksat, bassbus, boomP, growlP, kdrive, ksend, kN = 0, kpA, kpB, kdistC, hatA, hatO, hatG, hatTone, udel, dverb, atmosbus, echo, kdel, sherman, drumbus, grainer, space, master, frame, tom, anvil, accent, cycle, cyclePeak, bassN = 0;
-var rimP, blockP, zapP;
+var rimP, blockP, zapP, gritP;
 var tingsha, bellF;
 
 thisThread.randSeed = seed;
@@ -103,9 +103,9 @@ defs = [
     // (3x, 5x the root), heard as weight on any speaker, without the boomy 2nd
     sub = (sub * 2.8).tanh / 2.8.tanh;
     fmSig = (fmSig * (1 + drive)).tanh * fm;
-    body = (sub * 1.3) + click + (fmSig * 0.7) + (dl * 0.9);   // more grit: the kick's harmonics carry it on any speaker
-    body = BPeakEQ.ar(body, 95, 1.0, -4);   // keep the weight in the sub, not the boom
-    body = BPeakEQ.ar(body, 75, 0.9, -3);
+    body = (sub * 1.15) + click + (fmSig * 0.7) + (dl * 1.4);   // more grit: the kick's harmonics carry it on any speaker
+    body = BPeakEQ.ar(body, 95, 1.0, -2.5);   // keep the weight in the sub, not the boom
+    body = BPeakEQ.ar(body, 75, 0.9, -2);
     Out.kr(ctlDuck, EnvGen.kr(Env.perc(0.001, 0.28, 1, -3)));
     Out.ar(busKick, ((body * amp) ! 2) * (1 - mute));   // own path: never pumps the drums
     Out.ar(busSherman, (fmSig * amp * sherman) ! 2);
@@ -270,6 +270,56 @@ defs = [
     Out.ar(busKdel, sig * kdel);
   }),
 
+  // HAND PERCUSSION (v13, replaces the rim and the wood block, which clicked
+  // and sat in the way): a hand on a damped skin, or a hollow log. A soft
+  // noise strike (2-6 ms rise, never an impulse) excites four FIXED modal
+  // resonators, then gentle saturation. No pitch envelope, no click, nothing
+  // above 4.5 kHz: it sits in the low mids, under the other sounds.
+  SynthDef(\hand, { |freq = 300, amp = 0.3, decay = 0.18, rise = 0.003, tone = 1600, slap = 0.25, drive = 2,
+      pan = 0, sherman = 0.15, dverb = 0.2, udel = 0, kdel = 0, mute = 0|
+    var ratios = \ratios.kr([1, 1.59, 2.14, 2.65]), gains = \gains.kr([1, 0.5, 0.3, 0.15]);
+    var exc = LPF.ar(PinkNoise.ar, tone) * EnvGen.ar(Env([0, 1, 0], [rise, 0.02], [2, -4]));
+    var modes = Mix.fill(4, { |k| Ringz.ar(exc, freq * ratios[k], decay * (1 - (k * 0.18))) * gains[k] }) * 0.02;
+    var sig = modes + (LPF.ar(exc, tone * 0.8) * slap);
+    sig = (sig * drive).tanh / drive.tanh;
+    sig = HPF.ar(LPF.ar(sig, 4500), 150) * EnvGen.ar(Env.perc(0.001, decay * 1.6, 1, -4), doneAction: 2) * amp;
+    sig = Pan2.ar(sig, pan);
+    Out.ar(busDrums, sig * (1 - mute));
+    Out.ar(busDverb, sig * dverb * (1 - mute));
+    Out.ar(busUdel, sig * udel * (1 - mute));
+    Out.ar(busSherman, sig * sherman);
+    Out.ar(busKdel, sig * kdel);
+  }),
+
+  // GRIT (v13): noisy percussion, gravel and chains. White noise plus dense
+  // crackle through a band-pass and a short comb tuned to the key, a soft
+  // 4 ms rise, saturated, nothing above 5 kHz. Fixed tuning, no sweeps.
+  SynthDef(\grit, { |freq = 200, amp = 0.2, decay = 0.15, lo = 500, hi = 3000, crackle = 0.5, comb = 0.5,
+      pan = 0, sherman = 0.15, dverb = 0.25, udel = 0, mute = 0|
+    var env = EnvGen.ar(Env([0, 1, 0], [0.004, decay], [2, -5]), doneAction: 2);
+    var n = (WhiteNoise.ar * (1 - crackle)) + (Dust2.ar(2500) * 3 * crackle);
+    var sig = LPF.ar(HPF.ar(n, lo), hi);
+    sig = sig + (CombC.ar(sig, 0.05, 1 / freq, decay * 0.6) * comb * 0.5);
+    sig = LPF.ar((sig * env * 2.5).tanh * 0.5, 5000) * amp;
+    sig = Pan2.ar(sig, pan);
+    Out.ar(busDrums, sig * (1 - mute));
+    Out.ar(busDverb, sig * dverb * (1 - mute));
+    Out.ar(busUdel, sig * udel * (1 - mute));
+    Out.ar(busSherman, sig * sherman);
+  }),
+
+  // EXHALE (v13): a reversed noise breath into a phrase door. Noise through a
+  // FIXED resonant band-pass (a harmonic of the root) rises slowly and is
+  // cut dead on the beat. Wide, into the atmosphere bus and a little hall.
+  SynthDef(\exhale, { |freq = 600, amp = 0.1, dur = 1, rq = 0.25, hall = 0.3, mute = 0|
+    var env = EnvGen.ar(Env([0, 1, 0], [dur, 0.008], [5, -4]), doneAction: 2);
+    var n = [PinkNoise.ar, PinkNoise.ar];
+    var sig = (BPF.ar(n, freq, rq) * 2.5) + (LPF.ar(HPF.ar(n, 300), 2500) * 0.25);
+    sig = HPF.ar((sig * 2).tanh * env * amp, 200);
+    Out.ar(busAtmos, sig * (1 - mute));
+    Out.ar(busHall, sig * hall * (1 - mute));
+  }),
+
   // Tape echo (used twice: bass, and the kick's FM layer): left/right
   // times differ, cross-fed, every repeat thinner, darker and a little more
   // saturated, with slight wobble. Can feed the Sherman too.
@@ -321,7 +371,7 @@ defs = [
   //    then a dark tone filter: thick, warm, low saturation
   //  * "burger": a harder diode-style clip on the mids, contoured
   //  * a share continues into the Sherman for the resonant squelch
-  SynthDef(\satbus, { |drive = 3, burger = 0.3, tone = 2200, mix = 0.6, toSherman = 0.25, room = 0.1, kroom = 0.15, duckAmt = 0.6, kgain = 1.3|
+  SynthDef(\satbus, { |drive = 3, burger = 0.3, tone = 2200, mix = 0.6, toSherman = 0.25, room = 0.1, kroom = 0.15, duckAmt = 0.6, kgain = 1.5|
     // channels 0-1: the bass layers; 2-3: the kick. Same processing, but each
     // pair saturates on its own, so the kick never squeezes the bass
     var in = In.ar(busSat, 2) ++ In.ar(busKsat, 2);
@@ -332,7 +382,7 @@ defs = [
     decap = LPF.ar(decap, tone.lag(2));
     burg = LPF.ar(HPF.ar(burg, 300), 3000);
     sig = LeakDC.ar(decap + (burg * burger)) * mix;
-    sig = BPeakEQ.ar(sig, 100, 0.8, -6);   // warmth without boom in 70-150 Hz (reference match)
+    sig = BPeakEQ.ar(sig, 100, 0.8, -4.5);   // warmth without boom in 70-150 Hz (reference match)
     sig = Compander.ar(sig, sig, 0.3, 1, 0.5, 0.005, 0.1);
     bass = sig[0..1] * (1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt));   // the bass grit ducks under the kick
     kick = sig[2..3] * kgain;   // the kick's weight comes from its own harmonics, not the shared tape
@@ -352,7 +402,7 @@ defs = [
     sig = ((sig * sat) + 0.1).tanh - 0.1.tanh;
     sig = sig / (sat * (1 - 0.1.tanh.squared));
     sig = BPeakEQ.ar(sig, 200, 1.0, -1.5);   // drum bodies out of the low-mids
-    kick = BPeakEQ.ar(kick, 100, 1.0, -2.5);   // reference match: kick weight stays in the sub, not the boom
+    kick = BPeakEQ.ar(kick, 100, 1.0, -1.5);   // reference match: kick weight stays in the sub, not the boom
     kick = BPeakEQ.ar(kick, 200, 1.0, -1.5);
     sig = sig * (1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt));   // percussion breathes around the kick
     Out.ar(busSpace, sig);
@@ -532,13 +582,13 @@ defs = [
 
   // BASS BUS: compression, distortion, mono below 150 Hz, and a heavy duck
   // under every kick so kick and bass punch through each other.
-  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.85, room = 0.1|
+  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 1.2, room = 0.1|
     var in = In.ar(busLow, 2);
     var duckC = In.kr(ctlDuck).clip(0, 1);
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
     var mid, side, lo, hi;
     sig = Compander.ar(sig, sig, 0.3, 1, 1/3, 0.005, 0.15);
-    sig = BPeakEQ.ar(sig, 90, 0.8, -3);      // reference match: less boom in 60-120
+    sig = BPeakEQ.ar(sig, 90, 0.8, -1.5);    // reference match: less boom in 60-120 (v13: less dip, nine-reference median)
     sig = BPeakEQ.ar(sig, 180, 1.0, -1);
     sig = BPeakEQ.ar(sig, 280, 1.0, -1.5);   // keep the low-mids clean
     sig = sig + ((LPF.ar(HPF.ar(sig, 150), 1200) * 2.5).tanh * 0.18);  // parallel mid grit: heard on phones
@@ -585,7 +635,7 @@ defs = [
 
   // Master: long hall (pre-delayed, widened), then the tape, a de-harsh EQ
   // for the 3-4 kHz zone, glue and a limiter.
-  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.12, exMix = 0.35,
+  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.16, exMix = 0.45,
       fade = 1, fadeTime = 3|
     var sig = In.ar(busMix, 2);
     var kick = In.ar(busKickM, 2);
@@ -618,8 +668,9 @@ defs = [
       khi = khi / (d * (1 - bias.tanh.squared));
       sig = sig + klo + khi;
     }.value;
-    sig = BPeakEQ.ar(sig, 600, 0.7, 3.5);    // reference match: the mids carry this music
-    sig = BPeakEQ.ar(sig, 1200, 0.7, 2.5);   // mental tekno lives in the mids
+    sig = BPeakEQ.ar(sig, 600, 0.7, 2.5);    // reference match: the mids carry this music
+    sig = BPeakEQ.ar(sig, 1200, 0.7, 5);     // mental tekno lives in the mids
+    sig = BPeakEQ.ar(sig, 1900, 0.8, 4.5);     // v13: nine-reference match (800 Hz-2.5 kHz was 4 dB short)
     sig = BPeakEQ.ar(sig, 3500, 0.6, 4.5);   // reference match: presence (spikes are caught by the de-harsher)
     // RESONANCE CONTROL: narrow cuts only where root-tuned layers stack on the
     // same frequency (measured: 4x root sticks out +11 dB). The resonant
@@ -637,7 +688,7 @@ defs = [
     harsh = Amplitude.kr(BPF.ar(sig.sum * 0.5, 2600, 0.6), 0.005, 0.1).ampdb
       - Amplitude.kr(sig.sum * 0.5, 0.005, 0.1).ampdb;
     sig = BPeakEQ.ar(sig, 2600, 0.6, ((harsh + 17).clip(0, 9)).neg.lag(0.02));
-    sig = BHiShelf.ar(sig, 9000, 1, -4);       // reference match: less air (above the presence zone)
+    sig = BHiShelf.ar(sig, 9000, 1, -5.5);       // reference match: less air (above the presence zone)
     // PRESENCE EXCITER: the 1.5-6 kHz band saturated in parallel; it adds the
     // dense upper harmonics distorted mids have in this music (not EQ hiss)
     {
@@ -659,7 +710,7 @@ defs = [
     hi = HPF.ar(HPF.ar(sig, 3500), 3500);
     md = sig - lo - hi;
     lo = Compander.ar(lo, lo, 0.35, 1, 1/2, 0.02, 0.15);
-    md = Compander.ar(md, md, 0.5, 1, 1/2, 0.008, 0.15);    // catches spikes, not every kick
+    md = Compander.ar(md, md, 0.6, 1, 1/2, 0.008, 0.15);    // catches spikes, not every kick
     hi = Compander.ar(hi, hi, 0.2, 1, 1/2.5, 0.0015, 0.08);    // rounds off spiky highs, not every kick
     lo = (lo * loClip).tanh / loClip;        // kick clipping: unity for quiet lows, rounds only the kick's peaks
     sig = lo + md + hi;
@@ -740,7 +791,8 @@ tingsha = [pick.(1400, 2600), pick.(1400, 2600)];
 bellF = pick.(110, 230);
 rimP = euclid.(3, 16, 16.rand);     // rims: 3 in 16
 blockP = euclid.(2, 7, 7.rand);     // wood blocks: 2 in 7 (polymeter)
-zapP = euclid.(1, 12, 12.rand);     // zaps: 1 in 12
+zapP = euclid.(1, 12, 12.rand);     // zaps: 1 in 12 (unused; kept so the seeded patterns stay the same)
+gritP = euclid.(3, 11, 0);          // grit: 3 in 11 (v13)
 boomP = Array.fill(20, 0).put(6, 1).put(13, 1);   // booms: 20-step cycle (5 beats) between the kicks
 growlP = euclid.(2, 11, 11.rand);   // growls: 2 in 11
 lowP = euclid.(3, 13, 13.rand);     // low growls: 3 in 13
@@ -943,20 +995,46 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
     };
   };
 
-  // sparse percussion: rims 3-in-16, blocks 2-in-7, zaps 1-in-12, glitch rolls
+  // sparse percussion (v13): the old rim (snare-like click) and wood block
+  // (impulse click) are replaced by hand percussion on the SAME rhythms: a
+  // damped skin 3-in-16 (left), a hollow log 2-in-7 (right), their colour
+  // cycling in 3s and 5s. The glitch roll before every 8th bar is now a
+  // gravel roll that grows into the downbeat.
   if(groove and: { hush.not } and: { bar >= 28 }) {
     if(rimP[st] == 1) {
-      add.(time, \click, [\type, 0, \freq, 900, \amp, 0.336, \decay, 0.05, \pan, -0.5 + ((time * 2pi * 0.23).sin * 0.12),
-        \sherman, 0.15, \kdel, 0.2, \udel, 0], "sparse");
+      var c = s div: 16;
+      add.(time, \hand, [\freq, root * [8, 12, 10][c % 3], \amp, 1.6 * [1, 0.75, 0.9, 0.7, 0.85][c % 5],
+        \decay, [0.16, 0.22, 0.13][c % 3], \rise, 0.003, \tone, 1800, \slap, 0.3, \drive, 2.2,
+        \pan, -0.45 + ((time * 2pi * 0.23).sin * 0.12), \sherman, 0.2, \kdel, 0.15, \dverb, 0.25], "sparse");
     };
     if(blockP[s % 7] == 1) {
-      add.(time, \click, [\type, 1, \freq, pick.(500, 1100), \amp, 0.84, \decay, 0.12,
-        \pan, 0.5 + ((time * 2pi * 0.13).cos * 0.12), \sherman, 0.1, \kdel, 0.1, \udel, 0.2], "sparse");
+      var c = s div: 7;
+      add.(time, \hand, [\freq, pick.(220, 480), \amp, 2.5 * [1, 0.7, 0.85][c % 3], \decay, [0.14, 0.2, 0.11, 0.17, 0.12][c % 5],
+        \rise, 0.005, \tone, 1200, \slap, 0.1, \drive, 2.6, \ratios, [1, 2.32, 3.9, 5.1], \gains, [1, 0.4, 0.2, 0.1],
+        \pan, 0.5 + ((time * 2pi * 0.13).cos * 0.12), \sherman, 0.15, \udel, 0.2, \dverb, 0.2], "sparse");
     };
     if((bar % 8 == 7) and: { st >= 12 }) {
-      add.(time, \click, [\type, 3, \freq, rrand(1500, 4000), \amp, 0.224, \decay, 0.06,
-        \pan, rrand(-0.6, 0.6), \sherman, 0.4, \kdel, 0.3], "sparse");
+      add.(time, \grit, [\freq, root * 8, \amp, (st - 11) * 0.12, \decay, 0.07, \crackle, 0.6, \comb, 0.6,
+        \pan, (st - 13.5) * 0.3, \sherman, 0.25, \dverb, 0.3], "grit");
     };
+  };
+
+  // GRIT (v13): noisy percussion here and there. 3-in-11 (a polymeter like
+  // the references' 11-step cycles), only in the second half of each 8-bar
+  // phrase, so the top end breathes in and out over the phrase while the
+  // floor stays the same. Colour cycles in 3s and 4s; never on the beat.
+  if(groove and: { hush.not } and: { bar >= 32 } and: { (bar % 8) >= 4 } and: { gritP[s % 11] == 1 } and: { st % 4 != 0 }) {
+    var g = s div: 11;
+    add.(time, \grit, [\freq, root * [8, 12, 16][g % 3], \amp, 0.6 * [1, 0.6, 0.8, 0.55][g % 4],
+      \decay, [0.09, 0.2, 0.12, 0.3][g % 4], \crackle, [0.3, 0.7, 0.5][g % 3], \comb, [0.4, 0.7][g % 2],
+      \lo, [500, 700, 400][g % 3], \hi, [2600, 3200, 2200][g % 3],
+      \pan, [0.35, -0.3, 0.55, -0.5][g % 4], \sherman, 0.2, \dverb, 0.3, \udel, [0, 0.25][g % 2]], "grit");
+  };
+  // EXHALE: a breath of resonant noise over the last beat of each 8-bar
+  // phrase (and mid-phrase in the conjuration), cut dead on the next downbeat
+  if(groove and: { st == 12 } and: { (bar % 8 == 7) or: { conj and: { bar % 8 == 3 } } } and: { bar != 47 }) {
+    add.(time, \exhale, [\freq, root * [12, 16, 20][bar % 3], \amp, 0.22, \dur, 4 * stepDur,
+      \rq, 0.25, \hall, 0.35], "grit");
   };
 
   // BASS: sparse distorted layers on the ROOT only (no pitch changes), all

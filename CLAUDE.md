@@ -7,7 +7,7 @@ in the cloud. The producer listens on their **phone** (MP3s sent with
 SendUserFile) and gives feedback by ear. They are not a coder, so keep
 replies about the music: what changed and what it sounds like.
 
-The current track is **RITE**: `supercollider/rite.scd`, 112 BPM, about 3:00.
+The current track is **RITE**: `supercollider/rite.scd`, 110 BPM, about 3:03.
 Its version history and every design decision are in
 `supercollider/README.md`. Read that before changing anything. Work on
 branch `claude/music-recommendation-tool-237qop` unless told otherwise.
@@ -41,7 +41,7 @@ ceremonial magick is happening".
 - **Screeches:** BASS / industrial. Resonant, swelling "wooom - woom",
   distant and cinematic, delayed, comb-filtered, distorted, like turning a
   resonant filter up in a Sherman. Never high or harsh. The one in RITE at
-  about 2:14 is the model.
+  about 2:14 (2:16 since v13 at 110 BPM) is the model.
 - **Shermanized sounds:** more of them. Resonant, wet sound design,
   organic and synthetic combined.
 - **Distorted bass layers:** they love them (the low growl at 2:02 in an
@@ -68,25 +68,36 @@ ceremonial magick is happening".
 - Sound-design changes are fine if they improve the track, but when they
   ask to "fix the mix", don't change the sounds or rhythms.
 
-## Reference targets (loud sections, from their two reference clips)
+## Reference targets (loud sections of nine Falsa Ilusión tracks)
 
 Band level in dB of the total, then crest and stereo correlation. Measure
-with `supercollider/tools/mixcheck.py bands`.
+with `supercollider/tools/mixcheck.py bands`. The nine (v13): Primitif & Shivir
+- Ilusión Oculta (100 BPM), Bandikoot - Reverse Polarity (120), Nosh -
+Rhebulp (120) and Vector (140), Ciklo - Clavos y Piedras (110), Andiela - Aöm
+(102), Andiela vs SexWords - Cautela, Absorto, Envanecimiento (110).
 
-| band | ref 1 | ref 2 | RITE v12 (peak) |
+| band | ref median | ref range | RITE v13 (peak) |
 |---|---|---|---|
-| sub 20-60 | -1.6 | -1.0 | -0.9 |
-| low 60-120 | -13.5 | -15.4 | -13.1 |
-| lowmid 120-300 | -10.0 | -14.6 | -12.6 |
-| mid-lo 300-800 | -9.7 | -11.8 | -11.9 |
-| mid 800-2.5k | -16.4 | -11.7 | -16.8 |
-| presence 2.5-6k | -26.2 | -23.5 | -27.1 |
-| air 6-15k | -31.9 | -29.2 | -30.8 |
+| sub 20-60 | -1.9 | -5.1 … -0.7 | -1.2 |
+| low 60-120 | -11.6 | -14.5 … -6.8 | -12.8 |
+| lowmid 120-300 | -10.8 | -17.6 … -7.8 | -11.4 |
+| mid-lo 300-800 | -11.6 | -19.9 … -6.0 | -11.4 |
+| mid 800-2.5k | -12.6 | -17.1 … -7.3 | -14.2 / -13.0 |
+| presence 2.5-6k | -23.4 | -25.3 … -17.7 | -25.1 / -23.2 |
+| air 6-15k | -31.2 | -35.8 … -20.1 | -32.1 |
 
-- **References:** full-band crest 6.7-6.9 dB, about -7.3 LUFS, mids wide
-  (correlation 0.1-0.5), resonance peakiness 2.1-3.0 dB.
-- **RITE v12:** crest 6.8-6.9 dB, loud parts -8.9 LUFS, peak -1 dBFS,
-  mono-sum loss 0.1 dB, peakiness 2.1 dB.
+- **References:**
+  - Loud parts at -9.5 to -5.8 LUFS (median -7.9).
+  - Full-band crest 6.1-8.6 dB (median 6.8).
+  - Mid correlation 0.1-0.9.
+  - Peakiness 1.4-4.5 dB.
+  - The kick's harmonics (150 Hz-2 kHz) sit at -2 to -10 dB vs its sub
+    (median -7.6). The kick is tuned to 40-51 Hz.
+- **RITE v13:**
+  - Loud parts at -7.9 LUFS, peak -0.9 dBFS, crest 6.4-6.7 dB.
+  - Mono-sum loss 0.18 dB, peakiness 2.2 dB, kick harmonics -8.8 dB.
+- **The old two-clip targets (v10-v12)** matched only the darker of the two
+  clips. The nine-track set wants 3-4 dB more at 800 Hz-6 kHz and a little less sub.
 
 When the producer sends more references (files, or SoundCloud/Bandcamp
 links via `yt-dlp` when the environment allows those hosts), measure their

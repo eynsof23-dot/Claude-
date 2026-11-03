@@ -6,7 +6,7 @@ sc3-plugins (for the JPverb reverb). `./render.sh [seed] [piece]`, or open a
 different take on the same form. `SOLO=<layer>` renders a single layer, so
 you can export stems.
 
-## RITE (`rite.scd`): 3:00, 112 BPM
+## RITE (`rite.scd`): 3:03, 110 BPM
 
 Ceremonial electroacoustic and death-industrial. Every sound plays into one
 shared space (a short room, then console saturation, tape and a long hall),
@@ -16,10 +16,10 @@ on a single 16th-note grid with polyrhythms.
 |---|---|
 | 0:00 | **Invocation.** Gong swell, bell tolls, low chant with throat-singing overtones |
 | 0:17 | **Procession.** Frame drums 5-in-12, ritual bells every 6 sixteenths, half-time kick, dub bass teaser, braam |
-| 0:51 | **The rite.** Kick and bass talking ("boom, da-da"), bass tape echo, tresillo tom, anvil 3-in-5, braams |
-| 1:43 | **The void.** Cut: gong, bells, full choir |
-| 1:51 | **Conjuration.** The peak: industrial noise bed, tortured bowed metal, clank backbeat |
-| 2:43 | **Closing.** The beat leaves, echo tails, tolls; the tape wobbles and fades |
+| 0:52 | **The rite.** Kick and bass talking ("boom, da-da"), bass tape echo, tresillo tom, anvil 3-in-5, braams |
+| 1:45 | **The void.** Cut: gong, bells, full choir |
+| 1:53 | **Conjuration.** The peak: industrial noise bed, tortured bowed metal, clank backbeat |
+| 2:46 | **Closing.** The beat leaves, echo tails, tolls; the tape wobbles and fades |
 
 **Kick:** a clean sub, an FM "tok" (loud only in the half-time procession,
 where it feeds the Sherman and a tempo echo) and a low, warm distortion
@@ -122,9 +122,57 @@ a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
 - **Result:** loud parts at -8.9 LUFS, peak -1 dBFS, crest 6.8-6.9 dB (the
   references are at 6.7-6.9 dB). Mono-sum loss is 0.1 dB.
 
+**v13 (nine Falsa Ilusión references, new percussion, 110 BPM):**
+- **References measured.** Nine full tracks from the label (Primitif & Shivir,
+  Bandikoot, Nosh x2, Ciklo, Andiela, Andiela vs SexWords x3): tempo, the
+  loudest 16 s of each, the arrangement over time and the rhythm grid.
+- **Tempo 110 BPM** (was 112). The label sits at 100-140, and four of the
+  nine are at exactly 110 (Ciklo and all of Andiela vs SexWords). Everything
+  is on the step grid, so the form is the same, 3 s longer.
+- **The clicky percussion is gone.** From 1:00 the rim (a snare-like noise
+  click at 1.4 kHz, 0.9 ms attack) and the wood block (an impulse into a
+  resonator, 0.46 ms attack, peaking 5 dB under the whole mix) cut through
+  everything. On the same rhythms (3-in-16 and 2-in-7) there is now
+  hand percussion: a damped skin (left) and a hollow log (right). A soft noise
+  strike excites fixed modal resonators (2-6 ms rise, nothing above 4.5 kHz,
+  no pitch envelope). Its peaks sit 10 dB under the mix and its centre is around
+  530 Hz. The glitch roll before every 8th bar is now a gravel roll.
+- **Noisy percussion here and there.** `grit`: gravel and chain noise
+  with crackle, a comb tuned to the key, soft rise, dark (below 5 kHz). 3-in-11,
+  only in the second half of every 8-bar phrase, so the top breathes over
+  the phrase while the floor stays the same (that's how the references
+  vary: constant low end, the hi/air bands moving by up to 10 dB every
+  16-32 s). `exhale`: a resonant noise breath over the last beat of each
+  phrase, cut dead on the downbeat.
+- **Mix matched to the nine-reference median.** RITE was 4 dB short at
+  800 Hz-2.5 kHz and 3.7 dB short at 2.5-6 kHz, and the sub was too dominant.
+  - The kick's clean sub is down 1 dB, its grit layer is up, and its own
+    saturation is 15% louder. Harmonics vs sub went from -9.9 to -8.8 dB
+    (the refs' median is -7.6).
+  - Less dip at 90-100 Hz on the bass and saturation buses.
+  - The bass bus's wide mid saturation is up (0.85 to 1.2).
+  - On the master: +5 dB at 1.2 kHz, +4.5 dB at 1.9 kHz, the exciter at
+    0.45, the low-mid body at 0.16, 1.5 dB less air, and the mid band of the
+    multiband compressor eased.
+- **Result:**
+  - Every band of the peak is inside the references' range.
+  - Loud parts at -7.9 LUFS (the refs' median), peak -0.9 dBFS, crest
+    6.4-6.7 dB (the refs are at 6.1-8.6).
+  - Mono-sum loss 0.18 dB, peakiness 2.2 dB.
+  - The mids are noisier, closer to the references (flatness 0.21; the refs'
+    median is 0.23).
+  - Pilot test: the kick still doesn't squash anything (the 1-10 kHz tones
+    move less than 1 dB in the peak).
+- **What the references do that RITE doesn't (yet).** They're 5-7:47 long
+  and loudness stays flat for minutes once the groove starts. Breaks are about
+  16 s, and they drop the kick and sub but keep the textures. Most peak in the
+  last third. Kicks are four-on-the-floor (Bandikoot, Ciklo, Cautela) or a
+  broken one-bar pattern (Nosh - Vector at 140). Hats and percussion run
+  3-, 5-, 9- and 11-step cycles. Ciklo's bass answers the kick on the 3rd 16th.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 160 Hz). Closed hats just right of centre, open hat left, ghost ticks
-right. Rims left, wood blocks right, shaker right, anvil right, metal ticks
+right. Hand skin left, hollow log right, grit alternating left/right, shaker right, anvil right, metal ticks
 far right, clank left, frame drums split low-left / high-right, triplet
 hand drums alternating. Cymbals, whales, chant, braams and the screech tails
 wide. Percussion is tuned above the bass range, and there's a dip at
@@ -155,7 +203,7 @@ hand drums on triplet 8ths (3 against 4) and a metal pulse of 5 per bar
 - On the master: tape, de-harsh EQ, 3-band multiband compression, mono
   lows, limiter.
 
-Layers: `kick bass cymbals whales sherman hats sparse screech braam metal chant perc noise sub detritus grains`
+Layers: `kick bass cymbals whales sherman hats sparse grit screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 
