@@ -82,6 +82,23 @@ a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
 (not squashed). Phase checked: mono-sum loss is 0.0-0.3 dB below 300 Hz and
 1.2-1.8 dB in the mids.
 
+**v11 (weight, resonances, harshness):**
+- **Kick:** heavier, weighted with low saturation. A longer sub, symmetric
+  saturation (odd harmonics give weight without the boomy 2nd), and more
+  level.
+- **Resonances:** where root-tuned layers stack on the same frequency
+  (4x, 6x, 8x... the root), narrow notches follow the key. A dynamic
+  de-harsher at 2.6 kHz acts only on spikes.
+- **Cymbals:** excitation moved down to 1-3.5 kHz, less drive, darker tone
+  (11 dB less energy above 2.5 kHz).
+- **Bass and atmosphere:** weight restored. The bass's mid saturation is
+  smoother, the atmosphere bus has a low shelf, and the chant and hall are
+  high-passed lower.
+- **Presence:** comes from a parallel 1.5-6 kHz exciter on the master
+  (harmonics of the distorted mids), not from EQ hiss.
+- **Result:** every band of the peak section sits within the range of the
+  two references.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 120 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Rims left, wood blocks right, shaker right, anvil right, metal ticks

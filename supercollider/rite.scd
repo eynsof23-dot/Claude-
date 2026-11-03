@@ -86,7 +86,7 @@ defs = [
   // "drive" and "dist" change on every step and are automated per section.
   // Writes a duck envelope to a control bus for the sidechain.
   SynthDef(\kick, { |freq = 49, amp = 0.5, fm = 0.5, drive = 1.6, dist = 0.5, sherman = 0.5, kdel = 0.3, sat = 0.5, mute = 0|
-    var subEnv = EnvGen.ar(Env.perc(0.002, 0.5, 1, -4), doneAction: 2);
+    var subEnv = EnvGen.ar(Env.perc(0.002, 0.7, 1, -3.5), doneAction: 2);   // longer, heavier sub
     var penv = EnvGen.ar(Env([freq * 3.5, freq * 1.15, freq], [0.02, 0.1], \exp));
     var sine = SinOsc.ar(penv);
     var sub = sine * subEnv;
@@ -99,8 +99,11 @@ defs = [
     dl = (dl + (dl.squared * 0.25)).softclip;
     dl = LPF.ar(HPF.ar(dl, 40), 900) * EnvGen.ar(Env.perc(0.002, 0.3, 1, -3)) * dist;  // low, warm grit
     sub = (((sub * drive * 1.3) + 0.1).tanh - 0.1.tanh) * (1.6.tanh / (drive * 1.3).tanh);
+    // LOW SATURATION for weight: symmetric drive on the sub adds odd harmonics
+    // (3x, 5x the root), heard as weight on any speaker, without the boomy 2nd
+    sub = (sub * 2.2).tanh / 2.2.tanh;
     fmSig = (fmSig * (1 + drive)).tanh * fm;
-    body = (sub * 1.1) + click + (fmSig * 0.7) + (dl * 0.6);
+    body = (sub * 1.3) + click + (fmSig * 0.7) + (dl * 0.6);
     body = BPeakEQ.ar(body, 95, 1.0, -4);   // keep the weight in the sub, not the boom
     body = BPeakEQ.ar(body, 75, 0.9, -3);
     Out.kr(ctlDuck, EnvGen.kr(Env.perc(0.001, 0.28, 1, -3)));
@@ -167,7 +170,7 @@ defs = [
     var sig = RLPF.ar(osc, cut, 0.2);
     sig = sig + (BPF.ar(sig, (cut * 1.8).clip(60, 9000), 0.15) * 0.7);
     sig = ((sig * drive) + 0.2).tanh - 0.2.tanh;
-    sig = Pan2.ar(LPF.ar(HPF.ar(sig, 50), 2500) * env * amp, pan);   // dark after the drive: warm, not harsh
+    sig = Pan2.ar(LPF.ar(HPF.ar(sig, 50), 2000) * env * amp, pan);   // dark after the drive: warm, not harsh
     Out.ar(busLow, sig * (1 - mute));
     Out.ar(busSherman, sig * sherman);
     Out.ar(busSdel, sig * dly * (1 - mute));
@@ -196,15 +199,15 @@ defs = [
     var env = EnvGen.kr(Env([0, 1, 0.8, 0], [dur * 0.4, dur * 0.4, dur * 0.2], [3, 0, -3]));
     var rev = EnvGen.kr(Env([0, 1, 0], [dur, 0.02], [6, -4]));
     var press = env * LFNoise2.kr(3).range(0.6, 1.2);
-    var bow = (BPF.ar(PinkNoise.ar, LFNoise2.kr(0.5).exprange(2000, 5500), 0.5) * press * 0.3)
+    var bow = (BPF.ar(PinkNoise.ar, LFNoise2.kr(0.5).exprange(1200, 3500), 0.5) * press * 0.3)
       + (Dust.ar(LFNoise2.kr(1).range(60, 220)) * press * chatter * 0.5);
     var crash = Decay2.ar(Impulse.ar(0), 0.001, 0.06) * (1 + PinkNoise.ar(0.8)) * 1.5;
-    var scrape = BPF.ar(WhiteNoise.ar, LFNoise1.kr(5).exprange(1500, 5000), 0.6)
+    var scrape = BPF.ar(PinkNoise.ar, LFNoise1.kr(5).exprange(900, 3000), 0.6)
       * LFNoise0.ar(LFNoise1.kr(1).range(20, 60)).range(0, 1).squared * env * 0.5;
-    var swell = BPF.ar(PinkNoise.ar, 3500, 0.8) * rev * 0.5;
+    var swell = BPF.ar(PinkNoise.ar, 2200, 0.8) * rev * 0.5;
     var exc = Select.ar(mode, [bow, crash, scrape, swell]);
     var sig = DynKlank.ar(`[ratios, amps, rings], exc, freq * Line.kr(1, bend, dur));
-    sig = LPF.ar(LeakDC.ar((sig * 3).tanh), tone) * amp;
+    sig = LPF.ar(LPF.ar(LeakDC.ar((sig * 1.8).tanh), tone), tone) * amp;   // darker, less fizz
     sig = sig * Select.kr(mode, [1, 1, 1, rev]);
     DetectSilence.ar(sig.abs + Line.ar(1, 0, dur), 0.0002, 0.5, doneAction: 2);
     sig = Pan2.ar(sig, (pan + (LFNoise2.kr(0.2) * 0.2)).clip(-1, 1));
@@ -332,7 +335,7 @@ defs = [
     var in = In.ar(busDrums, 2);
     var sig = Compander.ar(in, in, thresh, 1, 1/3, 0.005, 0.12);
     sig = BPeakEQ.ar(sig, 100, 1.0, -2.5);   // reference match: kick weight stays in the sub, not the boom
-    sig = BPeakEQ.ar(sig, 200, 1.0, -3);     // drum bodies out of the low-mids
+    sig = BPeakEQ.ar(sig, 200, 1.0, -1.5);   // drum bodies out of the low-mids
     sig = ((sig * sat) + 0.1).tanh - 0.1.tanh;
     sig = sig / (sat * (1 - 0.1.tanh.squared));
     Out.ar(busSpace, sig);
@@ -392,7 +395,7 @@ defs = [
     var sig = Mix(BPF.ar(src, f, [0.12, 0.1, 0.08], [1, 0.6, 0.2])) * 3;
     var ot = (freq * LFNoise2.kr(0.1).range(overtone * 0.75, overtone * 1.25).round(1)).lag(0.5);
     sig = sig + (BPF.ar(src, ot, 0.012) * 5);
-    sig = Pan2.ar(LPF.ar(HPF.ar(sig, 120), 5000), (pan + (LFNoise2.kr(0.03) * 0.45)).clip(-1, 1)) * env * amp;
+    sig = Pan2.ar(LPF.ar(HPF.ar(sig, 90), 5000), (pan + (LFNoise2.kr(0.03) * 0.45)).clip(-1, 1)) * env * amp;
     Out.ar(busAtmos, sig * (1 - mute));
     Out.ar(busHall, sig * hall * (1 - mute));
     Out.ar(busGrain, sig * gsend);
@@ -489,9 +492,10 @@ defs = [
   SynthDef(\atmosbus, { |duckAmt = 0.3|
     var in = In.ar(busAtmos, 2);
     var duck = 1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt);
-    var sig = HPF.ar(in, 100);
+    var sig = HPF.ar(in, 70);
     sig = BPeakEQ.ar(sig, 350, 1.0, -2.5);
-    sig = BHiShelf.ar(sig, 6000, 1, -2);
+    sig = BLowShelf.ar(sig, 200, 1, 2);    // weight
+    sig = BHiShelf.ar(sig, 6000, 1, -3);
     sig = Compander.ar(sig, sig, 0.2, 1, 0.5, 0.03, 0.4);
     // slow image drift as a BALANCE move (a rotator flips polarity at wide
     // angles, which hollows the atmosphere out in mono)
@@ -504,15 +508,15 @@ defs = [
 
   // BASS BUS: compression, distortion, mono below 150 Hz, and a heavy duck
   // under every kick so kick and bass punch through each other.
-  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.42|
+  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.7|
     var in = In.ar(busLow, 2);
     var duckC = In.kr(ctlDuck).clip(0, 1);
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
     var mid, side, lo, hi;
     sig = Compander.ar(sig, sig, 0.3, 1, 1/3, 0.005, 0.15);
-    sig = BPeakEQ.ar(sig, 90, 0.8, -4);      // reference match: less boom in 60-120
-    sig = BPeakEQ.ar(sig, 180, 1.0, -3.5);
-    sig = BPeakEQ.ar(sig, 280, 1.0, -2.5);   // keep the low-mids clean
+    sig = BPeakEQ.ar(sig, 90, 0.8, -3);      // reference match: less boom in 60-120
+    sig = BPeakEQ.ar(sig, 180, 1.0, -1);
+    sig = BPeakEQ.ar(sig, 280, 1.0, -1.5);   // keep the low-mids clean
     sig = sig + ((LPF.ar(HPF.ar(sig, 150), 1200) * 2.5).tanh * 0.18);  // parallel mid grit: heard on phones
     sig = ((sig * sat) + 0.15).tanh - 0.15.tanh;
     sig = sig / (sat * (1 - 0.15.tanh.squared));
@@ -529,11 +533,11 @@ defs = [
     // then mixed in parallel: dense, aggressive, wide mids; lows stay mono.
     {
       var m = LPF.ar(HPF.ar(sig.sum * 0.5, 250), 3500);
-      var l = ((DelayN.ar(m, 0.01, 0.003) * 3.0) + 0.2).tanh - 0.2.tanh;
-      var r = ((DelayN.ar(m, 0.01, 0.007) * 3.6) + 0.15).tanh - 0.15.tanh;
-      sig = sig + (LPF.ar([l, r], 4000) * midSat);
+      var l = ((DelayN.ar(m, 0.01, 0.003) * 2.3) + 0.2).tanh - 0.2.tanh;
+      var r = ((DelayN.ar(m, 0.01, 0.007) * 2.7) + 0.15).tanh - 0.15.tanh;
+      sig = sig + (LPF.ar(LPF.ar([l, r], 3400), 3400) * midSat);   // smooth, not fizzy
     }.value;
-    Out.ar(busSpace, sig * 1.1);
+    Out.ar(busSpace, sig * 1.25);
   }),
 
   // THE SHARED ROOM: every sound passes through the same short early
@@ -549,12 +553,12 @@ defs = [
 
   // Master: long hall (pre-delayed, widened), then the tape, a de-harsh EQ
   // for the 3-4 kHz zone, glue and a limiter.
-  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5,
+  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, bodyMix = 0.12, exMix = 0.35,
       fade = 1, fadeTime = 3|
     var sig = In.ar(busMix, 2);
-    var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 160), 0.05, 0.045),
+    var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 120), 0.05, 0.045),
       8, 0.4, 2.6, 0.707, 0.3, 0.5, 1.0, 0.8, 0.5, 250, 4500);
-    var d = drive.lag(5), w = wow.lag(5), mid, side, lo, md, hi;
+    var d = drive.lag(5), w = wow.lag(5), mid, side, lo, md, hi, body, harsh;
     mid = (hall[0] + hall[1]) * 0.5;
     side = (hall[0] - hall[1]) * 0.5 * 1.15;   // wide, but still safe in mono
     hall = [mid + side, mid - side];
@@ -567,10 +571,35 @@ defs = [
     sig = sig + (HPF.ar(sig, 3000) * 0.5);
     sig = ((sig * d) + bias).tanh - bias.tanh;
     sig = sig / (d * (1 - bias.tanh.squared));
-    sig = BPeakEQ.ar(sig, 4000, 0.8, 3.5);   // reference match: presence
-    sig = BHiShelf.ar(sig, 6000, 1, -5);       // reference match: less air
+    sig = BPeakEQ.ar(sig, 1200, 0.7, 2);     // mental tekno lives in the mids
+    sig = BPeakEQ.ar(sig, 3500, 0.6, 4.5);   // reference match: presence (spikes are caught by the de-harsher)
+    // RESONANCE CONTROL: narrow cuts only where root-tuned layers stack on the
+    // same frequency (measured: 4x root sticks out +11 dB). The resonant
+    // character everywhere else stays.
+    // LOW-MID BODY: parallel compression of 120-400 Hz (what a phone can play),
+    // mixed under the dry signal: a dense, continuous low end, not one ringing note.
+    body = LPF.ar(LPF.ar(HPF.ar(sig, 120), 400), 400);
+    body = Compander.ar(body, body, 0.08, 1, 1/6, 0.003, 0.08) * 3;
+    sig = sig + (body * bodyMix);
+    \resoF.kr([196, 294, 392, 441, 686, 1960, 2842, 3205]).do { |f, i|
+      sig = BPeakEQ.ar(sig, f, 0.15, \resoG.kr([-10, -5, -4, -3.5, -3, -4, -4, -4])[i]);
+    };
+    // DYNAMIC DE-HARSH: the 2.6 kHz zone is pulled down only while it jumps
+    // out above the rest of the mix (bells, metal partials), up to 9 dB.
+    harsh = Amplitude.kr(BPF.ar(sig.sum * 0.5, 2600, 0.6), 0.005, 0.1).ampdb
+      - Amplitude.kr(sig.sum * 0.5, 0.005, 0.1).ampdb;
+    sig = BPeakEQ.ar(sig, 2600, 0.6, ((harsh + 17).clip(0, 9)).neg.lag(0.02));
+    sig = BHiShelf.ar(sig, 9000, 1, -4);       // reference match: less air (above the presence zone)
+    // PRESENCE EXCITER: the 1.5-6 kHz band saturated in parallel; it adds the
+    // dense upper harmonics distorted mids have in this music (not EQ hiss)
+    {
+      var ex = LPF.ar(HPF.ar(sig, 1500), 6000);
+      ex = HPF.ar(LPF.ar((ex * 4).tanh, 6000), 2200);
+      sig = sig + (ex * exMix);
+    }.value;
     sig = BPeakEQ.ar(sig, 320, 1.0, -2.5);   // make room in the low-mids
-    sig = BPeakEQ.ar(sig, 200, 0.8, -1.5);
+    sig = BPeakEQ.ar(sig, 250, 0.6, -1.5);   // broad: weight in the sub, not in the mud
+
     sig = DelayC.ar(sig, 0.03, 0.006 + (LFNoise2.kr(0.7) * 0.0012 * w) + (SinOsc.kr(5.8) * 0.00015 * w));
     sig = sig + HPF.ar(PinkNoise.ar(hiss.lag(5) ! 2), 1500);
     sig = LPF.ar(sig, 12500);
@@ -583,7 +612,7 @@ defs = [
     md = sig - lo - hi;
     lo = Compander.ar(lo, lo, 0.35, 1, 1/2, 0.02, 0.15);
     md = Compander.ar(md, md, 0.25, 1, 1/2, 0.008, 0.15);
-    hi = Compander.ar(hi, hi, 0.12, 1, 1/2.5, 0.003, 0.1);
+    hi = Compander.ar(hi, hi, 0.13, 1, 1/2.5, 0.0015, 0.08);   // rounds off spiky highs
     sig = lo + md + hi;
     sig = sig * gain * Lag.kr(fade, fadeTime);
     sig = (sig * clip).tanh / clip.tanh;      // soft clipper: rounds the peaks before the limiter
@@ -716,7 +745,8 @@ score.add([0.0114, bassbus.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 space = Synth.basicNew(\space, server);
 score.add([0.012, space.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 master = Synth.basicNew(\master, server);
-score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 1.3, \clip, 1.2], \addToTail)]);
+score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 1.3, \clip, 1.2,
+  \resoF, root * [4, 6, 8, 9, 14, 40, 58, 65.4]], \addToTail)]);
 
 // ---------------------------------------------------------------------------
 // LONG GESTURES
@@ -776,9 +806,9 @@ add.(at.(74), \chant, [\freq, root * 2, \amp, 0.45, \atk, 6, \sus, 14, \rel, 12,
 [[8, 3, 0, \cymbal, -0.6], [20, 4, 3, \gong, 0.55], [36, 2.5, 2, \plate, -0.45], [44, 3.5, 0, \sheet, 0.6],
  [48, 3, 1, \cymbal, -0.3], [56, 2.5, 3, \plate, 0.5], [64, 3, 2, \cymbal, -0.6], [74, 5, 0, \gong, 0.4]].do { |c|
   add.(at.(c[0]), \cymbal, [\freq, if(c[3] == \gong) { pick.(90, 180) } { pick.(220, 450) },
-    \amp, [0.7, 0.45, 0.6, 0.6][c[2]], \dur, c[1] * 16 * stepDur,
+    \amp, [0.56, 0.36, 0.48, 0.48][c[2]], \dur, c[1] * 16 * stepDur,
     \bend, if(c[2] == 0) { rrand(0.985, 0.995) } { 1 }, \chatter, rrand(0.3, 0.8), \mode, c[2],
-    \tone, rrand(5500, 9000), \pan, c[4], \hall, rrand(0.4, 0.7), \sherman, 0.1]
+    \tone, rrand(3500, 5500), \pan, c[4], \hall, rrand(0.4, 0.7), \sherman, 0.1]
     ++ metalSpec.(c[3], if(c[2] == 1) { 5 } { 3 }), "cymbals");
 };
 
@@ -815,15 +845,15 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
   // downbeats always anchored. Drive and distortion per step, automated per
   // section (building into the drops and the peak).
   if(hush.not) {
-    var kfm, ksh, kd, kdi, hit = false, kamp = 0.55;
+    var kfm, ksh, kd, kdi, hit = false, kamp = 0.63;
     kfm = pw.(x, [[12, 0.5], [23.9, 0.5], [24, 0.2], [52, 0.25], [76, 0.3]]);
     ksh = pw.(x, [[12, 0.3], [24, 0.45], [52, 0.65]]);
     kdi = pw.(x, [[12, 0.2], [24, 0.35], [40, 0.5], [46, 0.85], [48, 0.5], [52, 0.5], [64, 0.8], [75, 1.0]]);
     kd = pw.(x, [[12, 1.0], [24, 1.0], [46, 1.4], [52, 1.1], [75, 1.6]]);
     if((bar >= 12) and: { bar < 24 } and: { (st == 0) or: { st == 8 } }) { hit = true; kamp = 0.42 };
     if(rite and: { (st == 0) or: { kpA[s % 10] == 1 } }) { hit = true };
-    if(conj and: { bar < 64 } and: { (st == 0) or: { kpB[s % 14] == 1 } }) { hit = true; kamp = 0.62 };
-    if(conj and: { bar >= 64 } and: { st % 4 == 0 }) { hit = true; kamp = 0.62 };
+    if(conj and: { bar < 64 } and: { (st == 0) or: { kpB[s % 14] == 1 } }) { hit = true; kamp = 0.72 };
+    if(conj and: { bar >= 64 } and: { st % 4 == 0 }) { hit = true; kamp = 0.72 };
     if(hit) {
       add.(time, \kick, [\freq, root, \amp, kamp, \fm, kfm, \drive, kdrive[kN % 5] * kd,
         \dist, kdi * kdistC[kN % 5], \sherman, ksh, \kdel, ksend[kN % 7] * (if(bar < 24) { 0.55 } { 0.45 }),
