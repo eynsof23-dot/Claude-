@@ -7,7 +7,7 @@ in the cloud. The producer listens on their **phone** (MP3s sent with
 SendUserFile) and gives feedback by ear. They are not a coder, so keep
 replies about the music: what changed and what it sounds like.
 
-The current track is **RITE**: `supercollider/rite.scd`, 110 BPM, about 6:00 (since v14).
+The current track is **RITE**: `supercollider/rite.scd`, 110 BPM, about 4:30 (since v15; they found 6:00 too long).
 Its version history and every design decision are in
 `supercollider/README.md`. Read that before changing anything. Work on
 branch `claude/music-recommendation-tool-237qop` unless told otherwise.
@@ -58,6 +58,17 @@ ceremonial magick is happening".
   distortion and FM layers can). Everything below 160 Hz is mono. Use auto
   pan, flanger and unsynced delays for width.
 - **Tape:** glue with asymmetric tape distortion where it's needed.
+- **Top end:** no added air or hiss beds. A continuous 5.5-9.5 kHz air layer
+  (v14) was "too high and too brash". Keep the air at the dark end of the
+  references.
+- **Modular sequences and bleeps:** wanted, sparse, and they must be
+  audible: about 17-20 dB rms under the mix in the grooves. At 28-32 dB under
+  (v14) the producer couldn't hear them. Keep them low-passed (below about
+  2.8 kHz) so they don't add presence spikes.
+- **Atmosphere:** dense, dark textures are welcome (temple rumble, wind,
+  creaks, machine room). So are pads with an ancient vibe: open fifths,
+  vowel formants, no modern chords.
+- **Length:** about 4:30.
 
 **Mix rules:**
 - **Mental tekno lives in the mids.** Saturate the mids, avoid mud, never
@@ -76,15 +87,15 @@ with `supercollider/tools/mixcheck.py bands`. The nine (v13): Primitif & Shivir
 Rhebulp (120) and Vector (140), Ciklo - Clavos y Piedras (110), Andiela - Aöm
 (102), Andiela vs SexWords - Cautela, Absorto, Envanecimiento (110).
 
-| band | ref median | ref range | RITE v14 (grooves) |
+| band | ref median | ref range | RITE v15 (grooves) |
 |---|---|---|---|
 | sub 20-60 | -1.9 | -5.1 … -0.7 | -1.2 |
-| low 60-120 | -11.6 | -14.5 … -6.8 | -11.9 … -12.9 |
-| lowmid 120-300 | -10.8 | -17.6 … -7.8 | -11.3 … -12.9 |
-| mid-lo 300-800 | -11.6 | -19.9 … -6.0 | -11.1 … -12.5 |
-| mid 800-2.5k | -12.6 | -17.1 … -7.3 | -13.4 … -14.4 |
-| presence 2.5-6k | -23.4 | -25.3 … -17.7 | -19.8 … -22.3 |
-| air 6-15k | -31.2 | -35.8 … -20.1 | -28.0 … -31.4 |
+| low 60-120 | -11.6 | -14.5 … -6.8 | -12.5 … -13.2 |
+| lowmid 120-300 | -10.8 | -17.6 … -7.8 | -11.2 … -13.4 |
+| mid-lo 300-800 | -11.6 | -19.9 … -6.0 | -11.0 … -12.0 |
+| mid 800-2.5k | -12.6 | -17.1 … -7.3 | -12.8 … -13.5 |
+| presence 2.5-6k | -23.4 | -25.3 … -17.7 | -24.0 … -27.7 |
+| air 6-15k | -31.2 | -35.8 … -20.1 | -34.9 … -35.5 |
 
 - **References:**
   - Loud parts at -9.5 to -5.8 LUFS (median -7.9).
@@ -99,10 +110,11 @@ Rhebulp (120) and Vector (140), Ciklo - Clavos y Piedras (110), Andiela - Aöm
 - **References, arrangement:** 5-7:47 long, flat loudness in the grooves,
   16 s breaks that drop the kick and sub but keep the textures, the peak in
   the last third.
-- **RITE v14:**
-  - Grooves at -7.9 to -8.4 LUFS, peak -0.9 dBFS, crest 6.4-7.0 dB.
-  - Mono-sum loss 0.14 dB, side/mid -5 dB, mid correlation 0.5.
-  - Air moves 2.5 dB between blocks (still at the calm end).
+- **RITE v15:**
+  - Grooves at -7.8 to -8.8 LUFS, peak -0.9 dBFS, crest 6.4-6.9 dB.
+  - Mono-sum loss 0.16 dB, mid correlation 0.5-0.6.
+  - Dark top end by choice (the air layer was removed at the producer's
+    request).
 - **Clash and harshness check:** render every layer with `SOLO=<layer>` and
   compare the stems against the mix. Look at masking pairs per 1/3 octave,
   2.5-6 kHz spikes per minute and who causes them, and how many layers are

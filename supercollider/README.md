@@ -6,25 +6,25 @@ sc3-plugins (for the JPverb reverb). `./render.sh [seed] [piece]`, or open a
 different take on the same form. `SOLO=<layer>` renders a single layer, so
 you can export stems.
 
-## RITE (`rite.scd`): 6:00, 110 BPM
+## RITE (`rite.scd`): 4:30, 110 BPM
 
 Ceremonial electroacoustic and death-industrial. Every sound plays into one
 shared space (a short room, then console saturation, tape and a long hall),
-on a single 16th-note grid with polyrhythms. The 6-minute form (v14)
-follows the map of nine Falsa Ilusión references: a slow intro, flat
-grooves where elements rotate every 8 bars, two 16 s breaks that drop the
-kick and sub but keep the textures, and the peak in the last third.
+on a single 16th-note grid with polyrhythms. The form follows the map of
+nine Falsa Ilusión references: a slow intro, flat grooves where elements
+rotate every 8 bars, two 16 s breaks that drop the kick and sub but keep the
+textures, and the peak in the last third.
 
 | Time | Bars | Section |
 |---|---|---|
 | 0:00 | 0-8 | **Invocation.** Gong swell, bell tolls, low chant with throat-singing overtones |
-| 0:17 | 8-24 | **Procession.** Frame drums 5-in-12, ritual bells, half-time kick, dub bass teaser, braam, the air opens |
-| 0:52 | 24-56 | **The rite.** Kick 3-3-2-2 and bass talking, tresillo tom, hand percussion, grit, anvil, growls; modular sequence A enters at 1:45 |
-| 2:02 | 56-64 | **The void** (break). Gong, bells, full choir, sequence A alone in its echo, machine room |
-| 2:20 | 64-96 | **Conjuration.** Kick 4-4-3-3, clank backbeat, metal ticks, noise bed, sequence B with the tempo echo |
-| 3:29 | 96-104 | **The descent** (break). The low growl alone with the drone, the long screech, sequence B, tolls, a tom roll into the peak |
-| 3:47 | 104-144 | **The peak.** Kick 3-3-2-2-4-4-3-3 (24 steps), never a straight four; sequence C, hats accenting in 5s, 5-against-4 metal, sequence A returns at the end |
-| 5:14 | 144-164 | **Closing.** The kick walks out, echo tails, tolls, the tape wobbles and fades |
+| 0:17 | 8-20 | **Procession.** Frame drums, ritual bells, half-time kick from 0:26, dub bass teaser, first bleeps |
+| 0:44 | 20-44 | **The rite.** Kick 3-3-2-2 and bass talking, tresillo tom, hand percussion, grit, growls; modular sequence A from 1:01 |
+| 1:36 | 44-52 | **The void** (break). Gong, bells, full choir, the ancient pad, sequence A alone in its echo, temple and machine room |
+| 1:53 | 52-76 | **Conjuration.** Kick 4-4-3-3, clank backbeat, metal ticks, noise bed, sequence B with the tempo echo |
+| 2:46 | 76-84 | **The descent** (break). The low growl alone with the drone, the long screech, the ancient pad, tolls, a tom roll |
+| 3:03 | 84-112 | **The peak.** Kick 3-3-2-2-4-4-3-3 (24 steps), never a straight four; sequence C, then A; the pad underneath from 3:29 |
+| 4:04 | 112-124 | **Closing.** The kick walks out, the pad, tolls, the tape wobbles and fades |
 
 **Kick:** a clean sub, an FM "tok" (loud only in the half-time procession,
 where it feeds the Sherman and a tempo echo) and a low, warm distortion
@@ -223,6 +223,44 @@ a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
   - Pilot test: the kick moves the other tones by 1.4 dB at most, in every
     section.
 
+**v15 (4:30, no air, audible modular, denser dark atmosphere, ancient pads):**
+- **4:30** (124 bars). The same journey, tighter. Phrases are counted from bar
+  4, so every section starts on a phrase.
+- **The air layer is gone** (too high and brash on the phone). The top end
+  sits at the dark end of the references again (air about -35 dB; their
+  range is -35.8 to -20.1).
+- **The modular sequences were inaudible.** They sat 28-32 dB under the mix in
+  the grooves. They're now at 17-20 dB under, with a 2.8 kHz low-pass so the
+  louder folds don't add presence spikes (their share of spikes went from 33%
+  to 9%).
+- **New `bleep`s:** tiny low-pass-gate blips on fixed notes, 3-in-19 and
+  2-in-23 cycles drifting against the bar, into the unsynced echo.
+- **Denser atmosphere, kept dark:**
+  - `temple`: a distant rumble, a slow low-mid wind and far-off resonant
+    creaks, 260 Hz-3 kHz only. It runs under every section, louder in the
+    breaks.
+  - The machine room in both breaks and the closing.
+- **Ancient pads (`pad`):** a distant temple choir and harmonium. Open
+  fifths and octaves on the root (4x, 6x, 8x, 12x), no thirds. Detuned
+  pulses through vowel formants drifting u-o-a: the timbre moves, the notes
+  never do. In the void, the descent, under the second half of the peak and
+  in the closing.
+- **Clashes and crowding, re-measured from the stems:**
+  - The temple was first on the kick's body (214 Hz). It's high-passed at
+    260 Hz now.
+  - The frame drums moved to 8x and 12x the root and the tom to 7x. The
+    kick-perc low-mid clash is gone.
+  - Percussion ducks a little more under the kick (drum bus 0.3).
+  - Stacked percussion is thinned in the peak.
+  - Typically 4-5 layers are clearly audible at once, 6-8 at the 90th
+    percentile.
+- **Result:**
+  - All bands inside the references' range, mids at -12.8 to -13.5 dB (the
+    refs' median is -12.6).
+  - Grooves at -7.8 to -8.8 LUFS, peak -0.9 dBFS, crest 6.4-6.9 dB.
+  - Mono loss 0.16 dB, peakiness 2.6-2.8 dB.
+  - Pilot test: the kick moves the other tones by 2 dB at most.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 160 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Hand skin left, hollow log right, grit alternating left/right, shaker right, anvil right, metal ticks
@@ -256,7 +294,7 @@ hand drums on triplet 8ths (3 against 4) and a metal pulse of 5 per bar
 - On the master: tape, de-harsh EQ, 3-band multiband compression, mono
   lows, limiter.
 
-Layers: `kick bass cymbals whales sherman hats sparse grit seq air machine screech braam metal chant perc noise sub detritus grains`
+Layers: `kick bass cymbals whales sherman hats sparse grit seq pad temple machine screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 
