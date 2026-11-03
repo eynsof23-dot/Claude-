@@ -137,6 +137,7 @@ cd supercollider
 ./render.sh                               # rite.wav, seed 1 (about 3 min)
 SOLO=bass ./render.sh                     # one layer
 MUTE=kick,hats ./render.sh                # without some layers
+STEMS=1 SOLO=bass OUT=/abs/bass.wav ./render.sh   # Ableton stem: no master dynamics, 32-bit float
 ffmpeg -i rite.wav -b:a 320k RITE.mp3     # for the phone
 python3 tools/mixcheck.py bands ref.wav@60 rite.wav@121   # compare with a reference
 python3 tools/mixcheck.py reso|mono|loud ...               # resonances, phase, loudness

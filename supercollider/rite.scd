@@ -54,6 +54,7 @@
 (
 var seed = ("SEED".getenv ? "1").asInteger;
 var solo = "SOLO".getenv;
+var stems = "STEMS".getenv.notNil;   // STEMS=1: no master dynamics (limiter, clipper, multiband), 32-bit float: stems that sum
 var outPath = "OUT".getenv ? (thisProcess.nowExecutingPath.dirname +/+ "rite.wav");
 var bpm = 110, stepDur = 15 / bpm, bars = 124, total = bars * 16 * stepDur;
 var busSpace = 16, busHall = 18, busGrain = 20, busBass = 22, busMix = 24, ctlDuck = 10;
@@ -110,8 +111,8 @@ defs = [
     Out.kr(ctlDuck, EnvGen.kr(Env.perc(0.001, 0.28, 1, -3)));
     Out.ar(busKick, ((body * amp) ! 2) * (1 - mute));   // own path: never pumps the drums
     Out.ar(busSherman, (fmSig * amp * sherman) ! 2);
-    Out.ar(busKdel, (fmSig * amp * kdel) ! 2);
-    Out.ar(busDverb, (fmSig * amp * 0.1) ! 2);
+    Out.ar(busKdel, (fmSig * amp * kdel) ! 2 * (1 - mute));
+    Out.ar(busDverb, (fmSig * amp * 0.1) ! 2 * (1 - mute));
     Out.ar(busKsat, ((sub + (dl * 0.5)) * amp * sat ! 2) * (1 - mute));   // parallel saturation send (own wire)
     Out.ar(busRoom, (((fmSig * 0.7) + (dl * 0.6)) * amp * 0.2 ! 2) * (1 - mute));   // room send: the grit and the tok, never the sub
   }),
@@ -268,7 +269,7 @@ defs = [
     Out.ar(busDverb, sig * dverb * (1 - mute));
     Out.ar(busUdel, sig * udel * (1 - mute));
     Out.ar(busSherman, sig * sherman);
-    Out.ar(busKdel, sig * kdel);
+    Out.ar(busKdel, sig * kdel * (1 - mute));
   }),
 
   // HAND PERCUSSION (v13, replaces the rim and the wood block, which clicked
@@ -289,7 +290,7 @@ defs = [
     Out.ar(busDverb, sig * dverb * (1 - mute));
     Out.ar(busUdel, sig * udel * (1 - mute));
     Out.ar(busSherman, sig * sherman);
-    Out.ar(busKdel, sig * kdel);
+    Out.ar(busKdel, sig * kdel * (1 - mute));
   }),
 
   // GRIT (v13): noisy percussion, gravel and chains. White noise plus dense
@@ -338,7 +339,7 @@ defs = [
     Out.ar(busDverb, sig * dverb * (1 - mute));
     Out.ar(busUdel, sig * udel * (1 - mute));
     Out.ar(busKdel, sig * kdel * (1 - mute));
-    Out.ar(busSherman, sig * sherman * (1 - mute));
+    Out.ar(busSherman, sig * sherman);
     Out.ar(busHall, sig * hall * (1 - mute));
   }),
 
@@ -355,7 +356,7 @@ defs = [
     Out.ar(busDverb, sig * dverb * (1 - mute));
     Out.ar(busUdel, sig * udel * (1 - mute));
     Out.ar(busKdel, sig * kdel * (1 - mute));
-    Out.ar(busSherman, sig * sherman * (1 - mute));
+    Out.ar(busSherman, sig * sherman);
     Out.ar(busHall, sig * hall * (1 - mute));
   }),
 
@@ -728,13 +729,13 @@ defs = [
 
   // Master: long hall (pre-delayed, widened), then the tape, a de-harsh EQ
   // for the 3-4 kHz zone, glue and a limiter.
-  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.16, exMix = 0.45,
+  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.16, exMix = 0.45, dyn = 1,
       fade = 1, fadeTime = 3|
     var sig = In.ar(busMix, 2);
     var kick = In.ar(busKickM, 2);
     var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 160), 0.05, 0.045),
       8, 0.4, 2.6, 0.707, 0.3, 0.5, 1.0, 0.8, 0.5, 250, 4500);
-    var d = drive.lag(5), w = wow.lag(5), mid, side, lo, md, hi, body, harsh;
+    var d = drive.lag(5), w = wow.lag(5), mid, side, lo, md, hi, body, harsh, pre;
     mid = (hall[0] + hall[1]) * 0.5;
     side = (hall[0] - hall[1]) * 0.5 * 1.15;   // wide, but still safe in mono
     hall = [mid + side, mid - side];
@@ -796,6 +797,7 @@ defs = [
     sig = sig + HPF.ar(PinkNoise.ar(hiss.lag(5) ! 2), 1500);
     sig = LPF.ar(sig, 12500);
     sig = LeakDC.ar(sig);
+    pre = sig;   // for STEMS mode: everything before the master dynamics
     // 3-band (multiband / spectral) compression: lows, mids and highs are
     // controlled separately, so a loud kick doesn't push the cymbals down
     // and a bright hat burst doesn't squash the low end.
@@ -810,6 +812,7 @@ defs = [
     sig = sig * gain * Lag.kr(fade, fadeTime);
     sig = (sig * clip).tanh / clip.tanh;      // soft clipper: rounds the peaks before the limiter
     sig = Limiter.ar(sig, 0.89, 0.01);   // ceiling -1 dBFS
+    sig = (sig * dyn) + (pre * gain * Lag.kr(fade, fadeTime) * (1 - dyn));   // STEMS mode: dynamics bypassed
     Out.ar(0, sig);
   })
 ];
@@ -945,11 +948,11 @@ inR = { |el, bar| ranges[el].any { |r| (bar >= r[0]) and: { bar < r[1] } } };
 echo = Synth.basicNew(\echo, server);
 score.add([0.01, echo.newMsg(Group.basicNew(server, 1),
   [\in, busSdel, \tL, 3 * stepDur, \tR, 4 * stepDur, \fb, 0.3, \mix, 0.4, \hp, 300, \lp, 4000,
-   \toSherman, 0.2, \mute, on.("screech")], \addToTail)]);
+   \toSherman, 0.2], \addToTail)]);   // carries the growl's echo; follows its sends
 kdel = Synth.basicNew(\echo, server);
 score.add([0.0102, kdel.newMsg(Group.basicNew(server, 1),
   [\in, busKdel, \tL, 3 * stepDur, \tR, 6 * stepDur, \fb, 0.35, \mix, 0.7, \hp, 180, \lp, 4000,
-   \toSherman, 0.4, \mute, on.("kick")], \addToTail)]);
+   \toSherman, 0.4], \addToTail)]);   // the tempo echo: every layer's sends, so it follows the solo
 udel = Synth.basicNew(\echo, server);   // UNSYNCED delay: 311 ms / 467 ms, floats off the grid
 score.add([0.0103, udel.newMsg(Group.basicNew(server, 1),
   [\in, busUdel, \tL, 0.311, \tR, 0.467, \fb, 0.25, \mix, 0.35, \hp, 400, \lp, 5000, \toSherman, 0], \addToTail)]);
@@ -980,7 +983,7 @@ score.add([0.0114, bassbus.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 space = Synth.basicNew(\space, server);
 score.add([0.012, space.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 master = Synth.basicNew(\master, server);
-score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 0.86, \clip, 1.2,
+score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 0.86, \clip, 1.2, \dyn, if(stems) { 0 } { 1 },
   \resoF, root * [4, 6, 8, 9, 14, 40, 58, 65.4]], \addToTail)]);
 
 // ---------------------------------------------------------------------------
@@ -1411,7 +1414,7 @@ score.add([total, [\c_set, 0, 0]]);
 score.sort;
 
 ("RITE  seed " ++ seed ++ "  root " ++ root.round(0.01) ++ " Hz  ->  " ++ outPath).postln;
-score.recordNRT(outPath ++ ".osc", outPath, nil, 48000, "WAV", "int24", opts, "", total, {
+score.recordNRT(outPath ++ ".osc", outPath, nil, 48000, "WAV", if(stems) { "float" } { "int24" }, opts, "", total, {
   File.delete(outPath ++ ".osc");
   "done".postln;
   0.exit;

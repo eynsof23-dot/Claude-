@@ -4,7 +4,11 @@ Rendered offline (no audio device needed). Requires SuperCollider and
 sc3-plugins (for the JPverb reverb). `./render.sh [seed] [piece]`, or open a
 `.scd` file in the SuperCollider IDE and run it. A different seed gives a
 different take on the same form. `SOLO=<layer>` renders a single layer, so
-you can export stems.
+you can export stems. With `STEMS=1`, the master's limiter, clipper and
+multiband compressor are bypassed and the file is 32-bit float, so the stems
+sum back to the mix without clipping (put a limiter on the DAW master). Each
+layer's sends follow it into its own stem; the Sherman and the granulator
+are shared FX returns with stems of their own.
 
 ## RITE (`rite.scd`): 4:30, 110 BPM
 
