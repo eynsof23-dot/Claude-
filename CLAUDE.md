@@ -78,8 +78,16 @@ ceremonial magick is happening".
 - **Highs:** not as dark as v15 (they said "really dark, not much highs"),
   and never a noise bed. Get the top from harmonics (exciters, saturation),
   bright reverb tails and hats. Air around the references' median (-31 dB).
-- **Pads must be heard:** about 13-15 dB under the mix in the grooves, more in
-  the breaks.
+- **Pads must be heard, but never in front:** about 19-22 dB under the mix in
+  the grooves, 10-15 dB under in the breaks. At 13-15 dB under in the
+  grooves and 5 dB under in the void (v16), they said it devoured everything.
+- **Atmosphere is mostly wet:** they like it like a 100% wet reverb.
+- **An arpeggio with drive and an ancient vibe** (the lyre), echoed in half
+  time.
+- **No sub drops or sweeps** under the entries: they wreck the low end after
+  the drops.
+- **Bass not too dark:** keep some of its own harmonics at 1.4-4.5 kHz. The
+  hats' brightness is right as it is.
 - **Stems:** deliver them as a folder (zipped) of 24-bit WAVs, rendered with
   `STEMS=1`, all trimmed by the same amount, with the mastered mix included.
 

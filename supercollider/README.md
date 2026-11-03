@@ -311,6 +311,37 @@ a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
   - About 5 layers clearly audible at once.
   - Presence spikes in the rite halved (575 to 292 per minute).
 
+**v17 (a lyre arpeggio, no sub drops, wet atmosphere, a less dark bass):**
+- **The pad was devouring everything.** It was only 4.7 dB under the mix in
+  the void. It's now about 6 dB lower everywhere: 19-22 dB under in the
+  grooves, 10-15 dB under in the breaks.
+- **Arpeggio (`lyre`, layer `arp`):**
+  - An ancient plucked string: Karplus-Strong with a small body, gently
+    driven, under 3 kHz.
+  - Notes from the root's harmonic series (8, 12, 9, 14, 12, 16, 9: just
+    intonation, so the 7th and 9th give an old colour), cycling in 7s
+    against the bar.
+  - Rhythm: 9-in-16 in the conjuration, 11-in-16 in the peak (drive), 3-in-16
+    in the descent, where it drowns in its echo.
+  - Its own half-time ping-pong echo: a half note left, a dotted half right.
+  - Brightness and length change per phrase. It fades through the closing.
+  - Level: 16-19 dB under the mix in the grooves, 11 in the descent.
+  - Sequences B and C step aside where it plays.
+- **The sub drops are gone.** The `sub` layer swept down from 2x to 0.6x the
+  root under each entry, which wrecked the low end after the drops (and broke
+  the no-pitch-change rule).
+- **Atmosphere almost 100% wet.** The pad, temple, machine room and grains
+  send mostly to the long hall, with 20-30% dry.
+- **Noise layers down.** Temple -5 dB, grains -4 dB, machine -3 dB. They were
+  the loudest noise in the breaks.
+- **A less dark bass.** Parallel edge on the bass bus: its own harmonics
+  saturated at 1.4-4.5 kHz, above the free zone. The bass's energy above
+  1.4 kHz went from 1.1% to about 4%.
+- **Result:**
+  - All bands in the references' range.
+  - Grooves at -8.2 to -8.7 LUFS, mono loss 0.14 dB.
+  - About 5 layers clearly audible at once.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 160 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Hand skin left, hollow log right, grit alternating left/right, shaker right, anvil right, metal ticks
@@ -344,7 +375,7 @@ hand drums on triplet 8ths (3 against 4) and a metal pulse of 5 per bar
 - On the master: tape, de-harsh EQ, 3-band multiband compression, mono
   lows, limiter.
 
-Layers: `kick bass cymbals whales sherman hats sparse grit seq pad temple machine screech braam metal chant perc noise sub detritus grains`
+Layers: `kick bass cymbals whales sherman hats sparse grit seq arp pad temple machine screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 

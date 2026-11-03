@@ -49,7 +49,7 @@
 //       -> MASTER: tape, de-harsh EQ, 3-band multiband compression, limiter
 //
 // Render:  SEED=1 OUT=rite.wav sclang rite.scd      (SOLO=<layer> for stems:
-//          kick bass cymbals whales sherman hats sparse grit seq pad temple machine screech braam metal chant perc noise sub detritus grains)
+//          kick bass cymbals whales sherman hats sparse grit seq arp pad temple machine screech braam metal chant perc noise sub detritus grains)
 
 (
 var seed = ("SEED".getenv ? "1").asInteger;
@@ -58,12 +58,12 @@ var stems = "STEMS".getenv.notNil;   // STEMS=1: no master dynamics (limiter, cl
 var outPath = "OUT".getenv ? (thisProcess.nowExecutingPath.dirname +/+ "rite.wav");
 var bpm = 110, stepDur = 15 / bpm, bars = 124, total = bars * 16 * stepDur;
 var busSpace = 16, busHall = 18, busGrain = 20, busBass = 22, busMix = 24, ctlDuck = 10;
-var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44, busKick = 46, busKickM = 48, busKsat = 50, busRoom = 52;
+var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44, busKick = 46, busKickM = 48, busKsat = 50, busRoom = 52, busAdel = 54;
 var busSdel = busBass;  // the old bass echo bus now carries the screech echo
 var opts, server, score, defs, add, set, on, pw, euclid, metalSpec, root, field, pick, at;
 var wdel, whd, satbus, lowP, ksat, bassbus, boomP, growlP, kdrive, ksend, kN = 0, kpA, kpB, kdistC, hatA, hatO, hatG, hatTone, udel, dverb, atmosbus, echo, kdel, sherman, drumbus, grainer, space, master, frame, tom, anvil, accent, cycle, cyclePeak, bassN = 0;
 var rimP, blockP, zapP, gritP;
-var kpC, ranges, inR, seqAP, seqBP, seqCP, seqAN, seqBN, seqCN, bleepP, bleepQ, bleepN;
+var kpC, ranges, inR, seqAP, seqBP, seqCP, seqAN, seqBN, seqCN, bleepP, bleepQ, bleepN, arpN;
 var tingsha, bellF;
 
 thisThread.randSeed = seed;
@@ -343,6 +343,28 @@ defs = [
     Out.ar(busHall, sig * hall * (1 - mute));
   }),
 
+  // LYRE (v17): an ancient plucked string, a lyre or a santur. A
+  // Karplus-Strong string with a little body, gently driven, low-passed
+  // under 3 kHz. Its notes come from the root's natural harmonic series
+  // (just intonation: the 7th and 9th harmonics give the old colour) and
+  // match the pad. No glides. Its echo is a half-time ping-pong (half note
+  // and dotted half).
+  SynthDef(\lyre, { |freq = 392, amp = 0.2, decay = 1.2, bright = 0.5, drive = 1.6, pan = 0, adel = 0.4,
+      sherman = 0.1, hall = 0.1, dverb = 0.1, mute = 0|
+    var sig = Pluck.ar(LPF.ar(WhiteNoise.ar(0.6), bright.linexp(0, 1, 1200, 4000)), Impulse.ar(0), 0.05,
+      freq.reciprocal, decay, bright.linlin(0, 1, 0.55, 0.25));
+    sig = sig + (BPF.ar(sig, freq * 3, 0.3) * 0.3);
+    sig = (sig * drive).tanh / drive.tanh;
+    sig = HPF.ar(LPF.ar(LPF.ar(sig, 3000), 3000), 200) * amp;
+    DetectSilence.ar(sig, 0.0001, 0.2, doneAction: 2);
+    sig = Pan2.ar(sig, pan);
+    Out.ar(busDrums, sig * (1 - mute));
+    Out.ar(busAdel, sig * adel * (1 - mute));
+    Out.ar(busDverb, sig * dverb * (1 - mute));
+    Out.ar(busHall, sig * hall * (1 - mute));
+    Out.ar(busSherman, sig * sherman);
+  }),
+
   // BLEEP (v15): a tiny modular blip. A sine with a touch of phase
   // modulation through a very short low-pass gate; fixed notes, dark (below
   // 2.6 kHz), 4 ms rise: a blip, never a click or a zap.
@@ -384,8 +406,8 @@ defs = [
     sig = LPF.ar((sig * 0.9).tanh, 3200);
     sig = BPeakEQ.ar(BPeakEQ.ar(sig, freq * 12, 0.15, -4), freq * 24, 0.15, -5);   // no ringing partials (measured +10 dB)
     sig = HPF.ar(sig, 150) * env * amp.lag(4);
-    Out.ar(busAtmos, sig * (1 - mute));
-    Out.ar(busHall, sig * hall * (1 - mute));
+    Out.ar(busAtmos, sig * 0.3 * (1 - mute));   // v17: mostly wet
+    Out.ar(busHall, sig * hall * 1.6 * (1 - mute));
   }),
 
   // TEMPLE (v15): a dark field texture for a denser atmosphere. A distant
@@ -400,8 +422,8 @@ defs = [
     var ck = Ringz.ar(Dust.ar([0.35, 0.3] * creak), freq * [9, 13], 1.1) + Ringz.ar(Dust.ar([0.2, 0.25] * creak), freq * [11, 6], 0.8);
     var sig = rumble + wind + (LPF.ar(ck, 2500) * 0.06);
     sig = HPF.ar(HPF.ar(LPF.ar((sig * 1.5).tanh, 3000), 260), 260) * env * amp;   // above the kick's body
-    Out.ar(busAtmos, sig * (1 - mute));
-    Out.ar(busHall, sig * 0.5 * (1 - mute));
+    Out.ar(busAtmos, sig * 0.3 * (1 - mute));   // v17: mostly wet
+    Out.ar(busHall, sig * 1.0 * (1 - mute));
   }),
 
   // MACHINE ROOM (v14): a distant industrial room tone for the breaks.
@@ -414,8 +436,8 @@ defs = [
     sig = sig + (LPF.ar(n, LFNoise2.kr([0.06, 0.05]).exprange(250, 1100)) * 0.3);
     sig = (sig * 1.5).tanh * LFNoise2.kr(0.15).range(0.55, 1.0);
     sig = HPF.ar(sig, 140) * env * amp;
-    Out.ar(busAtmos, sig * (1 - mute));
-    Out.ar(busHall, sig * 0.4 * (1 - mute));
+    Out.ar(busAtmos, sig * 0.3 * (1 - mute));   // v17: mostly wet
+    Out.ar(busHall, sig * 1.0 * (1 - mute));
   }),
 
   // Tape echo (used twice: bass, and the kick's FM layer): left/right
@@ -642,8 +664,8 @@ defs = [
     sig = GrainBuf.ar(2, trig, TRand.kr(gdur * 0.5, gdur * 1.6, trig), buf, rate, pos, 4,
       TRand.kr(-0.9, 0.9, trig), -1, 512);
     sig = LPF.ar(LeakDC.ar(sig), 7000) * amp.lag(3) * (1 - mute);
-    Out.ar(busAtmos, sig * 0.6);
-    Out.ar(busHall, sig * 0.6);
+    Out.ar(busAtmos, sig * 0.2);   // v17: mostly wet
+    Out.ar(busHall, sig * 0.9);
   }),
 
   // DRUM PLATE: short and tight, pre-delayed a few ms, high-passed so the
@@ -681,7 +703,7 @@ defs = [
 
   // BASS BUS: compression, distortion, mono below 150 Hz, and a heavy duck
   // under every kick so kick and bass punch through each other.
-  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.9, room = 0.2, carve = -5, rf = 245, rq = 0.1, rmix = 0, hall = 0.12|
+  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.9, room = 0.2, carve = -5, rf = 245, rq = 0.1, rmix = 0, hall = 0.12, edge = 0.85|
     var in = In.ar(busLow, 2);
     var duckC = In.kr(ctlDuck).clip(0, 1);
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
@@ -726,6 +748,13 @@ defs = [
       sig = sig + (r * rmix.lag(0.5));
     }.value;
     sig = BPeakEQ.ar(sig, 860, 1.0, carve.lag(2));
+    // v17: EDGE above the free zone, so the bass isn't dull (it had 1% of its
+    // energy above 1.4 kHz): its own harmonics, saturated, 1.4-4.5 kHz
+    {
+      var e = HPF.ar(HPF.ar(sig, 1400), 1400);
+      e = LPF.ar(LPF.ar((e * 4).tanh, 4500), 4500);
+      sig = sig + (e * edge);
+    }.value;
     Out.ar(busSpace, sig * 1.25);
     Out.ar(busRoom, sig * 1.25 * room);
     // v16: space for the bass: its mids (never the sub) into the hall
@@ -940,6 +969,7 @@ seqCN = Array.fill(2, { pick.(300, 600) });
 bleepP = euclid.(3, 19, 19.rand);                // bleeps: 3 in 19
 bleepQ = euclid.(2, 23, 23.rand);                // and 2 in 23
 bleepN = Array.fill(5, { pick.(600, 1800) });    // fixed notes
+arpN = root * [8, 12, 9, 14, 12, 16, 9];         // v17 arpeggio: 7 notes of the harmonic series (7 against 16)
 
 // v15 ARRANGEMENT (4:30): which bars each element plays in ([from, to) in bars).
 // Elements rotate phrase by phrase: a few change every 8 bars, so the groove
@@ -961,9 +991,10 @@ ranges = (
   boom: [[14, 43], [52, 75], [84, 116]],
   growl: [[24, 43], [52, 75], [84, 108]],
   lowg: [[32, 43], [60, 75], [76, 83], [88, 108]],
-  seqA: [[28, 52], [100, 116]],
-  seqB: [[56, 75], [76, 83]],
-  seqC: [[84, 100]],
+  seqA: [[28, 52], [106, 116]],
+  seqB: [[56, 64], [76, 83]],
+  seqC: [[84, 92]],
+  arp: [[64, 75], [78, 84], [86, 96], [98, 116]],
   bleep: [[12, 43], [46, 52], [60, 75], [78, 84], [90, 112], [114, 122]]
 );
 inR = { |el, bar| ranges[el].any { |r| (bar >= r[0]) and: { bar < r[1] } } };
@@ -984,6 +1015,10 @@ score.add([0.0102, kdel.newMsg(Group.basicNew(server, 1),
 udel = Synth.basicNew(\echo, server);   // UNSYNCED delay: 311 ms / 467 ms, floats off the grid
 score.add([0.0103, udel.newMsg(Group.basicNew(server, 1),
   [\in, busUdel, \tL, 0.311, \tR, 0.467, \fb, 0.25, \mix, 0.35, \hp, 400, \lp, 5000, \toSherman, 0], \addToTail)]);
+~adelSyn = Synth.basicNew(\echo, server);   // v17: the arpeggio's half-time echo (half note / dotted half)
+score.add([0.01029, ~adelSyn.newMsg(Group.basicNew(server, 1),
+  [\in, busAdel, \tL, 8 * stepDur, \tR, 12 * stepDur, \fb, 0.42, \mix, 0.8, \hp, 250, \lp, 3000,
+   \toSherman, 0.1, \room, 0.15, \duckAmt, 0.35], \addToTail)]);
 wdel = Synth.basicNew(\echo, server);   // screech echo: half note left, dotted half right
 score.add([0.01031, wdel.newMsg(Group.basicNew(server, 1),
   [\in, busWdel, \tL, 8 * stepDur, \tR, 12 * stepDur, \fb, 0.45, \mix, 0.8, \hp, 160, \lp, 2200,
@@ -999,7 +1034,7 @@ score.add([0.0104, sherman.newMsg(Group.basicNew(server, 1),
   [\step, stepDur, \base, 250, \reso, 0.8, \drive, 4, \mix, 0.5, \mute, on.("sherman")], \addToTail)]);
 grainer = Synth.basicNew(\grainer, server);
 score.add([0.0106, grainer.newMsg(Group.basicNew(server, 1),
-  [\density, 2, \gdur, 0.3, \amp, 1.9, \spread, 0.05, \rev, 0.3, \mute, on.("grains")], \addToTail)]);
+  [\density, 2, \gdur, 0.3, \amp, 1.2, \spread, 0.05, \rev, 0.3, \mute, on.("grains")], \addToTail)]);
 dverb = Synth.basicNew(\dverb, server);
 score.add([0.0108, dverb.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 drumbus = Synth.basicNew(\drumbus, server);
@@ -1065,13 +1100,13 @@ add.(at.(114), \chant, [\freq, root * 2, \amp, 0.45, \atk, 6, \sus, 18, \rel, 12
 // peak and in the closing.
 {
   var p1, p3;
-  p1 = add.(at.(24), \pad, [\freq, root, \atk, 14, \sus, (28 * 16 * stepDur) - 22, \rel, 8, \amp, 1.75], "pad");
-  set.(at.(36), p1, [\amp, 2.25]);
-  set.(at.(44), p1, [\amp, 1.1]);   // the void: the pad in front, with the choir
-  add.(at.(76), \pad, [\freq, root, \atk, 4, \sus, (8 * 16 * stepDur) - 4, \rel, 6, \amp, 1.1], "pad");
-  p3 = add.(at.(96), \pad, [\freq, root, \atk, 2, \sus, (16 * 16 * stepDur) - 6, \rel, 6, \amp, 3.0], "pad");
-  set.(at.(98), p3, [\amp, 2.0]);   // forward in the drop, then under the peak
-  add.(at.(112), \pad, [\freq, root, \atk, 6, \sus, 18, \rel, 10, \amp, 1.25], "pad");
+  p1 = add.(at.(24), \pad, [\freq, root, \atk, 14, \sus, (28 * 16 * stepDur) - 22, \rel, 8, \amp, 0.9], "pad");
+  set.(at.(36), p1, [\amp, 1.15]);
+  set.(at.(44), p1, [\amp, 0.55]);   // the void: the pad in front, with the choir
+  add.(at.(76), \pad, [\freq, root, \atk, 4, \sus, (8 * 16 * stepDur) - 4, \rel, 6, \amp, 0.55], "pad");
+  p3 = add.(at.(96), \pad, [\freq, root, \atk, 2, \sus, (16 * 16 * stepDur) - 6, \rel, 6, \amp, 1.4], "pad");
+  set.(at.(98), p3, [\amp, 1.0]);   // forward in the drop, then under the peak
+  add.(at.(112), \pad, [\freq, root, \atk, 6, \sus, 18, \rel, 10, \amp, 0.6], "pad");
 }.value;
 
 // braams at the phrase doors (swells at 14, 40 and 80; the 40 one on the b2: dread)
@@ -1109,8 +1144,7 @@ add.(at.(114), \chant, [\freq, root * 2, \amp, 0.45, \atk, 6, \sus, 18, \rel, 12
     ++ metalSpec.(c[3], if(c[2] == 1) { 5 } { 3 }), "cymbals");
 };
 
-// subs under the three big entries
-[20, 52, 84].do { |b| add.(at.(b), \sub, [\freq, root, \amp, 0.5, \dur, 6], "sub") };
+// (v17: the sub drops under the entries are gone: their downward sweep wrecked the low end after each drop)
 
 // tortured bowed sheet metal, bending down
 [32, 60, 92, 104].do { |b|
@@ -1130,14 +1164,14 @@ add.(at.(86), \detritus, [\amp, 0.45, \density, 6, \dur, 28 * 16 * stepDur], "de
 
 // TEMPLE (v15): the dark field texture, denser atmosphere through the whole
 // piece: [bar, bars, level, creaks]. Louder in the breaks, lower under the grooves.
-[[2, 18, 0.5, 0.6], [20, 24, 0.9, 0.6], [44, 8, 0.7, 1.0], [52, 24, 0.8, 0.6], [76, 8, 0.7, 1.0],
- [84, 28, 0.7, 0.7], [112, 12, 0.6, 0.8]].do { |t|
+[[2, 18, 0.3, 0.6], [20, 24, 0.5, 0.6], [44, 8, 0.38, 1.0], [52, 24, 0.45, 0.6], [76, 8, 0.38, 1.0],
+ [84, 28, 0.4, 0.7], [112, 12, 0.35, 0.8]].do { |t|
   add.(at.(t[0]), \temple, [\freq, root, \amp, t[2], \creak, t[3], \atk, 6, \sus, (t[1] * 16 * stepDur) - 6, \rel, 6], "temple");
 };
 
 // MACHINE ROOM: a distant industrial room tone in the breaks and the closing
 [[42, 12, 14], [74, 10, 18], [114, 14, 18]].do { |m|
-  add.(at.(m[0]), \machine, [\freq, root * 2, \amp, 0.5, \atk, m[1], \sus, m[2], \rel, 8], "machine");
+  add.(at.(m[0]), \machine, [\freq, root * 2, \amp, 0.35, \atk, m[1], \sus, m[2], \rel, 8], "machine");
 };
 
 // ---------------------------------------------------------------------------
@@ -1306,6 +1340,25 @@ add.(at.(86), \detritus, [\amp, 0.45, \density, 6, \dur, 28 * 16 * stepDur], "de
         \decay, [0.05, 0.09, 0.06, 0.12][n % 4], \fm, [0.4, 1.0, 0.7][n % 3],
         \pan, if(q) { [-0.6, 0.6][(s div: 23) % 2] } { [0.3, -0.2, 0.65, -0.5, 0.1][n % 5] },
         \udel, [0.35, 0.15, 0.5][n % 3], \sherman, 0.1, \dverb, 0.2, \hall, if(groove) { 0.05 } { 0.2 }], "seq");
+    };
+  };
+
+  // ARPEGGIO (v17): the lyre. Notes cycle in 7s against the 16-step bar;
+  // the rhythm is 9-in-16 in the conjuration, 11-in-16 in the peak (more
+  // drive), and only 3-in-16 in the descent, where the plucks drown in their
+  // half-time echo. Accents cycle in 3s; brightness and length change per
+  // phrase, so it keeps evolving. It fades out through the closing.
+  if(inR.(\arp, bar) and: { hush.not }) {
+    var desc = (bar >= 76) and: { bar < 84 };
+    var pat = if(desc) { euclid.(3, 16, 0) } { if(peak) { euclid.(11, 16, 0) } { euclid.(9, 16, 0) } };
+    if(pat[st] == 1) {
+      var phr = (bar - 4) div: 8;
+      var fade = if(bar >= 112) { (116 - x).linlin(0, 4, 0, 1) } { 1 };
+      add.(time, \lyre, [\freq, arpN[s % 7], \amp, 1.1 * [1, 0.6, 0.8][s % 3] * fade * (if(desc) { 0.7 } { 1 }),
+        \decay, if(desc) { 2.5 } { [0.9, 1.4, 1.1, 1.7][phr % 4] },
+        \bright, [0.35, 0.55, 0.45, 0.7, 0.5][phr % 5], \drive, if(peak) { 2.2 } { 1.6 },
+        \pan, [-0.35, 0.3, -0.15, 0.45, -0.5, 0.2, 0.05][s % 7],
+        \adel, if(desc) { 0.8 } { 0.35 }, \sherman, 0.12, \hall, if(desc) { 0.3 } { 0.08 }], "arp");
     };
   };
 
