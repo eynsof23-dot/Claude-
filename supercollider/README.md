@@ -21,8 +21,14 @@ on a single 16th-note grid with polyrhythms.
 | 1:51 | **Conjuration.** The peak: industrial noise bed, tortured bowed metal, clank backbeat |
 | 2:43 | **Closing.** The beat leaves, echo tails, tolls; the tape wobbles and fades |
 
-**Kick:** a clean sub tuned to the key, plus an FM layer. Only the FM layer
-goes through the Sherman filterbank and a tempo delay.
+**Kick:** a clean sub plus an FM "tok" at 4x the root. The tok feeds the
+Sherman and a tempo echo. The distortion changes on every kick (a 5-step
+cycle against 4 kicks a bar), and so does the echo send (a 7-step cycle).
+
+**Bass (sparse, never rolling):** distorted sub booms gliding onto the
+root (20-step cycle), driven FM growls through the Sherman (2-in-11) and
+distorted drone swells under the phrases. They all run through a bass bus:
+compression, distortion, mono lows, and a heavy duck under the kick.
 
 **Screeches:** resonant filters at the edge of self-oscillation, a fifth
 apart, swept slowly with vibrato into a tempo echo. They sing instead of
@@ -48,7 +54,7 @@ hand drums on triplet 8ths (3 against 4) and a metal pulse of 5 per bar
 - On the master: tape, de-harsh EQ, 3-band multiband compression, mono
   lows, limiter.
 
-Layers: `kick sherman hats sparse screech braam metal chant perc noise sub detritus grains`
+Layers: `kick bass sherman hats sparse screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 
