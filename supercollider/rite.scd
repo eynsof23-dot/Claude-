@@ -324,7 +324,7 @@ defs = [
 
   // DRUM BUS: one compressor across kick, hats and percussion (glue), then
   // gentle asymmetric saturation, then into the shared space.
-  SynthDef(\drumbus, { |thresh = 0.3, sat = 1.4|
+  SynthDef(\drumbus, { |thresh = 0.3, sat = 1.25|
     var in = In.ar(busDrums, 2);
     var sig = Compander.ar(in, in, thresh, 1, 1/3, 0.005, 0.12);
     sig = ((sig * sat) + 0.1).tanh - 0.1.tanh;
@@ -477,7 +477,7 @@ defs = [
   // ATMOS BUS: everything atmospheric. EQ clean-up (high-pass, a dip where
   // the low-mids get muddy, a softer top), slow gentle compression, and a
   // slight duck under the kick so the drums breathe through the ambience.
-  // It also MOVES, slowly: the stereo image rotates, the tone drifts (low and
+  // It also MOVES, slowly: the stereo image drifts, the tone drifts (low and
   // high shelves wander a few dB over tens of seconds) and the level
   // breathes. Nothing changes pitch.
   SynthDef(\atmosbus, { |duckAmt = 0.3|
@@ -487,7 +487,9 @@ defs = [
     sig = BPeakEQ.ar(sig, 350, 1.0, -2.5);
     sig = BHiShelf.ar(sig, 6000, 1, -2);
     sig = Compander.ar(sig, sig, 0.2, 1, 0.5, 0.03, 0.4);
-    sig = Rotate2.ar(sig[0], sig[1], LFNoise2.kr(0.025) * 0.6);
+    // slow image drift as a BALANCE move (a rotator flips polarity at wide
+    // angles, which hollows the atmosphere out in mono)
+    sig = Balance2.ar(sig[0], sig[1], LFNoise2.kr(0.025) * 0.35);
     sig = BLowShelf.ar(sig, 250, 1, LFNoise2.kr(0.04).range(-3, 1.5));
     sig = BHiShelf.ar(sig, 3000, 1, LFNoise2.kr(0.035).range(-4, 1.5));
     sig = sig * LFNoise2.kr(0.05).range(0.8, 1.05);
@@ -496,24 +498,30 @@ defs = [
 
   // BASS BUS: compression, distortion, mono below 150 Hz, and a heavy duck
   // under every kick so kick and bass punch through each other.
-  SynthDef(\bassbus, { |duckAmt = 0.92, sat = 2.0|
+  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0|
     var in = In.ar(busLow, 2);
-    var duck = 1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt);
+    var duckC = In.kr(ctlDuck).clip(0, 1);
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
-    var mid, side;
+    var mid, side, lo, hi;
     sig = Compander.ar(sig, sig, 0.3, 1, 1/3, 0.005, 0.15);
     sig = BPeakEQ.ar(sig, 280, 1.0, -2.5);   // keep the low-mids clean
-    sig = sig + ((LPF.ar(HPF.ar(sig, 150), 1200) * 2.5).tanh * 0.25);  // parallel mid grit: heard on phones
+    sig = BPeakEQ.ar(sig, 650, 0.9, -2);     // leave the mids to chant, percussion, Sherman, screech tails
+    sig = sig + ((LPF.ar(HPF.ar(sig, 150), 1200) * 2.5).tanh * 0.18);  // parallel mid grit: heard on phones
     sig = ((sig * sat) + 0.15).tanh - 0.15.tanh;
     sig = sig / (sat * (1 - 0.15.tanh.squared));
+    // frequency-split sidechain: the lows get out of the kick's way completely,
+    // the mids a little less, so the texture stays continuous without pumping
+    lo = LPF.ar(LPF.ar(sig, 150), 150);
+    hi = sig - lo;
+    sig = (lo * (1 - (duckC * duckAmt))) + (hi * (1 - (duckC * 0.75)));
     mid = (sig[0] + sig[1]) * 0.5;
     side = HPF.ar((sig[0] - sig[1]) * 0.5, 150);
-    Out.ar(busSpace, [mid + side, mid - side] * duck * 1.1);
+    Out.ar(busSpace, [mid + side, mid - side] * 1.1);
   }),
 
   // THE SHARED ROOM: every sound passes through the same short early
   // reflections and the same console saturation: one physical space.
-  SynthDef(\space, { |roomMix = 0.18, sat = 1.3|
+  SynthDef(\space, { |roomMix = 0.18, sat = 1.15|
     var in = In.ar(busSpace, 2);
     var room = JPverb.ar(HPF.ar(in, 200), 0.55, 0.5, 0.5, 0.707, 0.1, 1.0, 1, 1, 0.8, 400, 7000);
     var sig = in + (room * roomMix);
@@ -531,9 +539,9 @@ defs = [
       8, 0.4, 2.6, 0.707, 0.3, 0.5, 1.0, 0.8, 0.5, 250, 4500);
     var d = drive.lag(5), w = wow.lag(5), mid, side, lo, md, hi;
     mid = (hall[0] + hall[1]) * 0.5;
-    side = (hall[0] - hall[1]) * 0.5 * 1.4;
+    side = (hall[0] - hall[1]) * 0.5 * 1.15;   // wide, but still safe in mono
     hall = [mid + side, mid - side];
-    sig = sig + (hall * hallMix);
+    sig = sig + (hall * hallMix.lag(4));
     sig = HPF.ar(sig, 24);
     // lows below 120 Hz in mono: the kick and sub hit the center as one
     mid = (sig[0] + sig[1]) * 0.5;
@@ -556,7 +564,7 @@ defs = [
     lo = LPF.ar(LPF.ar(sig, 150), 150);
     hi = HPF.ar(HPF.ar(sig, 3500), 3500);
     md = sig - lo - hi;
-    lo = Compander.ar(lo, lo, 0.3, 1, 1/3, 0.01, 0.2);
+    lo = Compander.ar(lo, lo, 0.35, 1, 1/2, 0.02, 0.15);
     md = Compander.ar(md, md, 0.25, 1, 1/2, 0.008, 0.15);
     hi = Compander.ar(hi, hi, 0.12, 1, 1/2.5, 0.003, 0.1);
     sig = lo + md + hi;
@@ -983,17 +991,21 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
 // ---------------------------------------------------------------------------
 set.(at.(8), grainer, [\density, 5, \gdur, 0.2, \spread, 0.2]);
 set.(at.(24), grainer, [\density, 8, \gdur, 0.12, \spread, 0.4, \rev, 0.35]);
+set.(at.(24), master, [\hallMix, 0.65]);
+set.(at.(48), master, [\hallMix, 0.85]);
+set.(at.(52), master, [\hallMix, 0.65]);
+set.(at.(76), master, [\hallMix, 0.85]);
 set.(at.(48), grainer, [\density, 3, \gdur, 0.6, \spread, 0.02, \rev, 0.5]);
 set.(at.(52), grainer, [\density, 14, \gdur, 0.08, \spread, 0.7, \rev, 0.45]);
 set.(at.(76), grainer, [\density, 3, \gdur, 0.5, \spread, 0.05, \rev, 0.6, \amp, 0.9]);
-set.(at.(52), master, [\drive, 1.8]);
+set.(at.(52), master, [\drive, 1.5]);
 set.(at.(24), sherman, [\base, 280, \reso, 0.85, \drive, 4.5]);
 set.(at.(44), sherman, [\mix, 0.15]);   // calm the Sherman in the build: no squelch on the roll
 set.(at.(48), sherman, [\mix, 0.5, \base, 180, \reso, 0.85, \drive, 3]);
 set.(at.(52), sherman, [\base, 320, \reso, 0.9, \drive, 5, \lfoAmt, 0.2]);
 set.(at.(76), sherman, [\base, 200, \reso, 0.7, \drive, 3]);
 set.(at.(76), master, [\drive, 1.5, \wow, 1.2, \hiss, 0.006]);
-set.(at.(80), master, [\wow, 2.2, \drive, 2.2, \hiss, 0.008]);
+set.(at.(80), master, [\wow, 2.2, \drive, 1.8, \hiss, 0.008]);
 set.(at.(81), master, [\fadeTime, 5, \fade, 0]);
 
 score.add([total, [\c_set, 0, 0]]);

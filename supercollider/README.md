@@ -61,6 +61,15 @@ sheet), pitch, tone and side.
 **Whales**, sparse and far away: slow gliding calls through a flanger, the
 hall and their own long echo (0.83 / 1.27 s).
 
+**Mix chain (v9):** the bass bus dips 280 Hz and 650 Hz and uses a
+frequency-split sidechain (lows duck fully, mids less). Saturation stages are
+lighter: console 1.15, drum bus 1.25, master tape at most 1.5-1.8. The
+master's low band compresses gently (2:1, slower attack). The hall comes
+down in the grooves. The atmosphere drifts with a balance control (not a
+rotator, so its polarity never flips) and the hall width is mono-safe.
+Checked per band: lows mono (corr 1.0), low-mids 0.91, mids 0.66,
+presence 0.45; the whole track loses 0.15 dB when summed to mono.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 120 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Rims left, wood blocks right, shaker right, anvil right, metal ticks
