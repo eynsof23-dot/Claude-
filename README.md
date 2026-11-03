@@ -5,7 +5,7 @@ samples: every sound is synthesised from physical models, oscillators, noise
 and filters. Each run composes a new piece, which can be written to a WAV file
 or streamed live, endlessly.
 
-It has two styles:
+It has three styles:
 
 - **electroacoustic** (default). Acousmatic sound worlds made of struck,
   scraped and bowed metal, glass and wood; prepared strings; granular clouds
@@ -13,6 +13,11 @@ It has two styles:
   through space; hard cuts into silence. There are no chords and no beat.
 - **cinematic.** Dark tonal film music: drone, pads, choir, braams, risers,
   taiko, a pulsing ostinato.
+- **ritual.** A composed 4:30 track: ambient and IDM crossed with tekno drive
+  and a cinematic industrial atmosphere. Bowed tortured cymbals, whales,
+  field recordings, primal percussion in polymeters, a distorted rolling
+  bass with tape echo, a tuned kick, neurobass, glitches and a
+  Sherman-style filterbank.
 
 ```
   seed 1234  ·  electroacoustic  ·  03:00
@@ -49,6 +54,8 @@ piece renders in about 5 seconds.
 ./soundscape                          # electroacoustic, 3 minutes -> soundscape.wav
 ./soundscape -s 1234 -d 300           # seed 1234, 5 minutes (same seed = same piece)
 ./soundscape --style cinematic        # the film-music style
+./soundscape --style ritual -s 7      # the 4:30 ritual track (136 BPM)
+./soundscape --style ritual --bpm 128 # slower; the length follows the tempo
 ```
 
 **Listen live, forever:**
@@ -74,6 +81,7 @@ layer does:
 |---|---|
 | electroacoustic | `resonators strings grains glitter sweeps air sub` |
 | cinematic | `drone pad choir braam booms drums heartbeat risers bells wind ostinato` |
+| ritual | `cymbals whales field atmosphere kick perc bass neuro filterbank` |
 
 **Export stems for your DAW.** The same seed always gives the same piece, so
 the solos line up sample for sample:
@@ -127,6 +135,49 @@ way spectralist composers work. Scenes follow an energy arc and have their
 own contour (rising, falling, arch). They either crossfade, or **cut**:
 everything chokes into silence, only the reverb tail survives, and the next
 world opens with an attack.
+
+## How the ritual style works
+
+| File | What's in it |
+|---|---|
+| `src/ritual_instruments.hpp` | Bowed cymbals, whales, field recordings, kick, percussion, bass, neurobass, tape, echo, stutter, filterbank |
+| `src/ritual.hpp` | The arrangement: sections, automation curves, the 16th-note sequencer |
+
+| Time | Section |
+|---|---|
+| 0:00 | **Awakening.** Three bowed cymbals being bent and ground; wind, a creek, crickets, drips; whales |
+| 0:35 | **Gathering.** Frame drums (5 in 12), shaker accents every 3, log drum (3 in 7); a muffled bass |
+| 1:03 | **The call.** The kick arrives half-time, the bass filter opens, a riser, a beat of silence |
+| 1:17 | **Ritual I.** Kick + rolling bass with echo, tresillo deep drum, industrial clank, anvil, bones |
+| 2:21 | **Descent.** The beat drops out: whales, thunder, tortured cymbals, neurobass; a drum roll |
+| 2:56 | **Ritual II.** The peak: more drive, neurobass, double clank, more glitches |
+| 3:52 | **Dissolution.** Instruments leave one by one; the bowed cymbals and field recordings close it |
+
+The seed picks the key (E to A Phrygian), the patterns and every event.
+The arrangement is fixed. Techniques worth stealing:
+
+- **Bowed cymbal, tortured.** 40 dense inharmonic modes driven by
+  high-passed noise (the bow). Bend all the modes together by a few percent
+  for the groan. Add stick-slip "chatter" impulses for the grind.
+- **Kick and bass as one engine.** The kick is tuned to the key's root, the
+  bass plays the three 16ths *between* kicks, and the bass ducks under
+  every kick (sidechain). The sub stays clean, the mids get the tape drive
+  and the echo.
+- **Asymmetric tape.** A bias before `tanh()` makes even harmonics (warmth).
+  Auto-gain keeps the level steady, so drive changes the tone, not the
+  volume.
+- **Polymeter.** Patterns of 12, 7, 5, 9 and 3 steps over a 16-step bar.
+  The bass plays 3 notes per beat but cycles 7 pitches. Nothing lines up
+  for long, which makes it hypnotic.
+- **IDM stutter.** Grab the last 16th or 32nd and loop it while sliding the
+  pitch and crushing the bits. Use it at phrase ends.
+- **Filterbank.** Drive, then a resonant low-pass close to
+  self-oscillation, then a band-pass in series. Modulate the cutoff with an
+  envelope follower, a 7-step LFO and a random step on every 16th. Feed it
+  drums *and* water *and* bass, and organic and synthetic melt together.
+- **Field recordings from nothing.** A creek is hundreds of tiny sines that
+  rise in pitch as they decay (bubbles). Crickets are a 4.5 kHz tone
+  switched on and off in pulse trains.
 
 ## How the cinematic style works
 

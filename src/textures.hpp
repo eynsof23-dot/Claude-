@@ -205,7 +205,7 @@ class Sweeps {
     sr_ = sr;
     rng_ = Rng(seed);
   }
-  // shape 0: swell (rise and fall), 1: attack then fade
+  // shape 0: swell (rise and fall), 1: attack then fade, 2: rise, cut at the end
   void trigger(float f0, float f1, float seconds, float amp, int shape, acoustic::Spatial::Path path) {
     for (auto& v : v_) {
       if (v.active) continue;
@@ -243,8 +243,9 @@ class Sweeps {
       v.sp.block(dt, sr_);
       v.t += dt;
       float pe = std::min(1.0f, v.t / v.dur);
-      float target = v.shape == 0 ? std::pow(std::sin(kPi * pe), 2.0f)
-                                  : smoothstep(0.0f, 0.03f, pe) * (1.0f - pe) * (1.0f - pe);
+      float target = v.shape == 0   ? std::pow(std::sin(kPi * pe), 2.0f)
+                     : v.shape == 1 ? smoothstep(0.0f, 0.03f, pe) * (1.0f - pe) * (1.0f - pe)
+                                    : std::pow(pe, 2.5f) * (1.0f - smoothstep(0.97f, 1.0f, pe));  // riser
       target *= v.amp;
       float step = (target - v.env) / float(b.n);
       float killK = decayCoef(0.015f, sr_);

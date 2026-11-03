@@ -2,6 +2,7 @@
 //
 //   soundscape                          electroacoustic, 3 minutes -> soundscape.wav
 //   soundscape --style cinematic        the tonal, trailer-like style
+//   soundscape --style ritual           the composed 4:30 ritual / industrial track
 //   soundscape -s 42 -d 300             a specific 5-minute piece
 //   soundscape --raw | ffplay ...       endless, live (see README)
 //   soundscape --solo grains,glitter    hear single layers to learn how they sound
@@ -16,6 +17,7 @@
 #include <vector>
 
 #include "electroacoustic.hpp"
+#include "ritual.hpp"
 #include "soundscape.hpp"
 
 #if defined(__SSE__) || defined(_M_X64)
@@ -100,7 +102,8 @@ void usage() {
   std::fprintf(stderr,
                "soundscape — generative dark soundscapes\n\n"
                "usage: soundscape [options]\n"
-               "      --style NAME     electroacoustic (default) or cinematic\n"
+               "      --style NAME     electroacoustic (default), cinematic or ritual\n"
+               "      --bpm N          tempo of the ritual track (default 136; length follows)\n"
                "  -o, --out FILE       WAV file to write (default: soundscape.wav)\n"
                "  -d, --duration SEC   length in seconds (default: 180)\n"
                "  -s, --seed N         same seed = same piece (default: random)\n"
@@ -113,6 +116,7 @@ void usage() {
                "layers:\n");
   printLayers("electroacoustic", Electroacoustic::layerNames());
   printLayers("cinematic", Soundscape::layerNames());
+  printLayers("ritual", RitualTrack::layerNames());
 }
 
 bool parseLayers(const std::string& list, const std::vector<const char*>& names, unsigned& mask) {
@@ -209,6 +213,7 @@ int main(int argc, char** argv) {
   opt.seed %= 1000000;  // short seeds are easier to note down
   std::string out = "soundscape.wav", style = "electroacoustic", soloList, muteList;
   bool raw = false, durationGiven = false;
+  float bpm = RitualTrack::kDefaultBpm;
 
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
@@ -224,6 +229,8 @@ int main(int argc, char** argv) {
       return 0;
     } else if (a == "--style") {
       style = value();
+    } else if (a == "--bpm") {
+      bpm = float(std::atof(value().c_str()));
     } else if (a == "-o" || a == "--out") {
       out = value();
     } else if (a == "-d" || a == "--duration") {
@@ -247,10 +254,19 @@ int main(int argc, char** argv) {
       return 2;
     }
   }
-  bool cinematic = style == "cinematic";
-  if (!cinematic && style != "electroacoustic" && style != "electro") {
-    std::fprintf(stderr, "unknown style '%s' (use electroacoustic or cinematic)\n", style.c_str());
+  bool cinematic = style == "cinematic", ritualStyle = style == "ritual";
+  if (!cinematic && !ritualStyle && style != "electroacoustic" && style != "electro") {
+    std::fprintf(stderr, "unknown style '%s' (use electroacoustic, cinematic or ritual)\n", style.c_str());
     return 2;
+  }
+  if (ritualStyle) {
+    if (bpm < 60.0f || bpm > 200.0f) {
+      std::fprintf(stderr, "--bpm must be between 60 and 200\n");
+      return 2;
+    }
+    if (durationGiven) std::fprintf(stderr, "note: the ritual track is arranged; its length follows --bpm\n");
+    opt.duration = RitualTrack::lengthFor(bpm);
+    durationGiven = true;
   }
   if (opt.sr < 8000.0f || opt.sr > 192000.0f) {
     std::fprintf(stderr, "sample rate must be between 8000 and 192000\n");
@@ -261,7 +277,9 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "duration must be positive\n");
     return 2;
   }
-  std::vector<const char*> names = cinematic ? Soundscape::layerNames() : Electroacoustic::layerNames();
+  std::vector<const char*> names = cinematic     ? Soundscape::layerNames()
+                                   : ritualStyle ? RitualTrack::layerNames()
+                                                 : Electroacoustic::layerNames();
   unsigned solo = 0, mute = 0;
   if (!soloList.empty() && !parseLayers(soloList, names, solo)) return 2;
   if (!muteList.empty() && !parseLayers(muteList, names, mute)) return 2;
@@ -271,12 +289,20 @@ int main(int argc, char** argv) {
   if (cinematic) {
     Soundscape scape(opt);
     rc = run(scape, opt, raw, out);
+  } else if (ritualStyle) {
+    RitualTrack scape(opt, bpm);
+    rc = run(scape, opt, raw, out);
   } else {
     Electroacoustic scape(opt);
     rc = run(scape, opt, raw, out);
   }
-  if (!raw && rc == 0)
-    std::fprintf(stderr, "  replay this exact piece with:  soundscape --style %s -s %llu -d %g\n\n",
-                 cinematic ? "cinematic" : "electroacoustic", (unsigned long long)opt.seed, opt.duration);
+  if (!raw && rc == 0) {
+    if (ritualStyle)
+      std::fprintf(stderr, "  replay this exact track with:  soundscape --style ritual -s %llu --bpm %g\n\n",
+                   (unsigned long long)opt.seed, double(bpm));
+    else
+      std::fprintf(stderr, "  replay this exact piece with:  soundscape --style %s -s %llu -d %g\n\n",
+                   cinematic ? "cinematic" : "electroacoustic", (unsigned long long)opt.seed, opt.duration);
+  }
   return rc;
 }
