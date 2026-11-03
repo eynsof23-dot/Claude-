@@ -57,10 +57,10 @@ var solo = "SOLO".getenv;
 var outPath = "OUT".getenv ? (thisProcess.nowExecutingPath.dirname +/+ "rite.wav");
 var bpm = 112, stepDur = 15 / bpm, bars = 84, total = bars * 16 * stepDur;
 var busSpace = 16, busHall = 18, busGrain = 20, busBass = 22, busMix = 24, ctlDuck = 10;
-var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40;
+var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44;
 var busSdel = busBass;  // the old bass echo bus now carries the screech echo
 var opts, server, score, defs, add, set, on, pw, euclid, metalSpec, root, field, pick, at;
-var satbus, lowP, ksat, bassbus, boomP, growlP, kdrive, ksend, kN = 0, kpA, kpB, kdistC, hatA, hatO, hatG, hatTone, udel, dverb, atmosbus, echo, kdel, sherman, drumbus, grainer, space, master, frame, tom, anvil, accent, cycle, cyclePeak, bassN = 0;
+var wdel, whd, satbus, lowP, ksat, bassbus, boomP, growlP, kdrive, ksend, kN = 0, kpA, kpB, kdistC, hatA, hatO, hatG, hatTone, udel, dverb, atmosbus, echo, kdel, sherman, drumbus, grainer, space, master, frame, tom, anvil, accent, cycle, cyclePeak, bassN = 0;
 var rimP, blockP, zapP;
 var tingsha, bellF;
 
@@ -110,24 +110,30 @@ defs = [
   }),
 
   // SWELL (the industrial bass screech): a grinding bass tone (saws on the
-  // root, a sub pulse) whose FIXED resonances, tuned to the root's 3rd, 5th,
-  // 7th, 9th and 13th harmonics, ring louder and tighter while noise, crackle
-  // and distortion grow through the swell: a machine straining. Nothing
-  // sweeps, so there is no pitch movement. Cuts dead on the downbeat. Runs
-  // through the bass bus (distortion, pumping under the kick).
+  // root, a sub pulse) whose FIXED resonances (the root's 3rd, 5th, 7th, 9th
+  // and 13th harmonics, plus a comb on its octave) ring louder and tighter
+  // while noise, crackle and distortion grow: a machine straining. Nothing
+  // sweeps, so there is no pitch movement. Cuts dead on the downbeat. Only the
+  // low body stays dry in the bass bus; the resonant screech is thrown wide,
+  // far back into the hall and a long tempo echo ("wooom ... woom").
   SynthDef(\swell, { |freq = 49, dur = 4, amp = 0.2, drive = 3, pan = 0, sherman = 0.2, mute = 0|
     var env = EnvGen.kr(Env([0, 1, 0], [dur, 0.05], [4, -4]), doneAction: 2);
     var p = EnvGen.kr(Env([0, 1], [dur], 3));
-    var src = (Saw.ar(freq * [1, 1.003]).sum * 0.4) + (Pulse.ar(freq * 0.5, 0.35) * 0.4)
+    var src = (Saw.ar(freq * [1, 1.003]) * 0.4) + (Pulse.ar(freq * 0.5, 0.35) * 0.4)
       + (PinkNoise.ar(0.4) * p) + (Crackle.ar(1.95) * 0.15 * p);
-    var res = Mix(BPF.ar(src, freq * [3, 5, 7, 9, 13], (0.08 - (p * 0.065)).max(0.012), [1, 0.8, 0.6, 0.5, 0.35]))
-      * (1 + (p * 6));
-    var sig = (src * 0.3) + res;
-    sig = ((sig * (1 + (drive * p * 3))) + 0.2).tanh - 0.2.tanh;
-    sig = LPF.ar(LeakDC.ar(sig), 2500) * env * amp;
-    sig = Pan2.ar(sig, pan);
-    Out.ar(busLow, sig * (1 - mute));
-    Out.ar(busHall, sig * 0.08 * (1 - mute));
+    var res = Mix(BPF.ar(src, freq * [3, 5, 7, 9, 13], (0.05 - (p * 0.042)).max(0.006), [1, 0.8, 0.6, 0.5, 0.35]))
+      * (1 + (p * 9));
+    var comb = CombC.ar(src * 0.2, 0.05, [1 / (freq * 2), 1 / (freq * 2.004)], 1.5 + (p * 2));
+    var sig = (src * 0.25) + res + (comb * p);
+    var low, wide;
+    sig = ((sig * (1 + (drive * p * 4.5))) + 0.2).tanh - 0.2.tanh;
+    sig = LPF.ar(LeakDC.ar(sig), 2200) * env * amp;
+    low = LPF.ar(sig.sum * 0.5, 150);   // the low body stays dry and centred (bass bus)
+    wide = HPF.ar(sig, 150);            // the resonant screech goes wide and far back
+    Out.ar(busLow, (low ! 2) * (1 - mute));
+    Out.ar(busAtmos, wide * 0.45 * (1 - mute));
+    Out.ar(busHall, wide * 0.7 * (1 - mute));
+    Out.ar(busWdel, wide * 0.6 * (1 - mute));
     Out.ar(busSherman, sig * sherman);
   }),
 
@@ -177,20 +183,29 @@ defs = [
     Out.ar(busLow, sig * (1 - mute));
   }),
 
-  // TORTURED CYMBAL: a bowed cymbal (dense inharmonic modes, mostly high)
-  // with bow pressure surging, a grinding stick-slip chatter (a train of
-  // tiny jerks), only a slight bend of the whole metal, and saturation.
-  SynthDef(\cymbal, { |freq = 300, amp = 0.2, dur = 6, bend = 0.99, chatter = 0.5, pan = 0, hall = 0.5,
-      sherman = 0.15, mute = 0|
+  // TORTURED CYMBAL: dense inharmonic modes (cymbal, gong, plate or sheet),
+  // played four ways: BOWED (surging pressure + stick-slip chatter + a slight
+  // bend), a STRUCK crash with a long ring, SCRAPED (jagged friction), or a
+  // REVERSED swell that cuts dead. Saturated; tone and placement vary.
+  SynthDef(\cymbal, { |freq = 300, amp = 0.2, dur = 6, bend = 0.99, chatter = 0.5, mode = 0, tone = 8500,
+      pan = 0, hall = 0.5, sherman = 0.15, mute = 0|
+    // mode 0 bowed · 1 struck crash · 2 scraped · 3 reversed swell (cut dead)
     var ratios = \ratios.kr(1 ! 16), amps = \amps.kr(0.05 ! 16), rings = \rings.kr(1 ! 16);
     var env = EnvGen.kr(Env([0, 1, 0.8, 0], [dur * 0.4, dur * 0.4, dur * 0.2], [3, 0, -3]));
+    var rev = EnvGen.kr(Env([0, 1, 0], [dur, 0.02], [6, -4]));
     var press = env * LFNoise2.kr(3).range(0.6, 1.2);
-    var bow = BPF.ar(PinkNoise.ar, LFNoise2.kr(0.5).exprange(2000, 5500), 0.5) * press * 0.3;
-    var jerk = Dust.ar(LFNoise2.kr(1).range(60, 220)) * press * chatter * 0.5;
-    var sig = DynKlank.ar(`[ratios, amps, rings], bow + jerk, freq * Line.kr(1, bend, dur));
-    sig = LPF.ar(LeakDC.ar((sig * 3).tanh), 8500) * amp;
+    var bow = (BPF.ar(PinkNoise.ar, LFNoise2.kr(0.5).exprange(2000, 5500), 0.5) * press * 0.3)
+      + (Dust.ar(LFNoise2.kr(1).range(60, 220)) * press * chatter * 0.5);
+    var crash = Decay2.ar(Impulse.ar(0), 0.001, 0.06) * (1 + PinkNoise.ar(0.8)) * 1.5;
+    var scrape = BPF.ar(WhiteNoise.ar, LFNoise1.kr(5).exprange(1500, 5000), 0.6)
+      * LFNoise0.ar(LFNoise1.kr(1).range(20, 60)).range(0, 1).squared * env * 0.5;
+    var swell = BPF.ar(PinkNoise.ar, 3500, 0.8) * rev * 0.5;
+    var exc = Select.ar(mode, [bow, crash, scrape, swell]);
+    var sig = DynKlank.ar(`[ratios, amps, rings], exc, freq * Line.kr(1, bend, dur));
+    sig = LPF.ar(LeakDC.ar((sig * 3).tanh), tone) * amp;
+    sig = sig * Select.kr(mode, [1, 1, 1, rev]);
     DetectSilence.ar(sig.abs + Line.ar(1, 0, dur), 0.0002, 0.5, doneAction: 2);
-    sig = Pan2.ar(sig, (pan + (LFNoise2.kr(0.2) * 0.3)).clip(-1, 1));
+    sig = Pan2.ar(sig, (pan + (LFNoise2.kr(0.2) * 0.2)).clip(-1, 1));
     Out.ar(busAtmos, sig * (1 - mute));
     Out.ar(busHall, sig * hall * (1 - mute));
     Out.ar(busSherman, sig * sherman);
@@ -214,7 +229,7 @@ defs = [
     sig = Pan2.ar(sig, (pan + (LFNoise2.kr(0.1) * 0.3)).clip(-1, 1));
     Out.ar(busAtmos, sig * 0.4 * (1 - mute));
     Out.ar(busHall, sig * 0.9 * (1 - mute));
-    Out.ar(busUdel, sig * 0.6 * (1 - mute));
+    Out.ar(busWhd, sig * 0.8 * (1 - mute));   // their own long echo
   }),
 
   // Hats: six detuned square waves (the classic metallic hat cluster) +
@@ -281,6 +296,7 @@ defs = [
     var y1 = (RLPF.ar(x, cut, rq) * 1.6).tanh;
     var y2 = BPF.ar(y1, (cut * 2.4).clip(40, 14000), rq * 1.5) * 2;
     var sig = LPF.ar(LeakDC.ar(((y1 * 0.6) + (y2 * 0.9)).tanh), 9000) * 0.5 * mix * (1 + (sw * 1.5));
+    sig = [sig[0], (sig[1] * 0.6) + (DelayN.ar(sig[1], 0.02, 0.011) * 0.5)];   // a little width
     Out.ar(busSpace, sig * (1 - mute));
     Out.ar(busHall, sig * 0.1 * (1 - mute));
   }),
@@ -325,7 +341,7 @@ defs = [
     var r = Mix([1, 2, 3].collect { |r2, n| Saw.ar(freq * r2 * [-0.13, 0.02, 0.1].midiratio, [1, 0.8, 0.5][n] / 3).sum });
     var sig = ([l, r] * 2.5).tanh;
     sig = RLPF.ar(sig, 60 + (fenv * bright * 3000), 0.45);
-    sig = HPF.ar(sig, 45) * env * amp;
+    sig = HPF.ar(sig, 90) * env * amp;
     Out.ar(busAtmos, sig * (1 - mute));
     Out.ar(busHall, sig * 0.3 * (1 - mute));
     Out.ar(busGrain, sig * 0.2);
@@ -467,7 +483,7 @@ defs = [
   SynthDef(\atmosbus, { |duckAmt = 0.3|
     var in = In.ar(busAtmos, 2);
     var duck = 1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt);
-    var sig = HPF.ar(in, 70);
+    var sig = HPF.ar(in, 100);
     sig = BPeakEQ.ar(sig, 350, 1.0, -2.5);
     sig = BHiShelf.ar(sig, 6000, 1, -2);
     sig = Compander.ar(sig, sig, 0.2, 1, 0.5, 0.03, 0.4);
@@ -486,12 +502,13 @@ defs = [
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
     var mid, side;
     sig = Compander.ar(sig, sig, 0.3, 1, 1/3, 0.005, 0.15);
+    sig = BPeakEQ.ar(sig, 280, 1.0, -2.5);   // keep the low-mids clean
     sig = sig + ((LPF.ar(HPF.ar(sig, 150), 1200) * 2.5).tanh * 0.25);  // parallel mid grit: heard on phones
     sig = ((sig * sat) + 0.15).tanh - 0.15.tanh;
     sig = sig / (sat * (1 - 0.15.tanh.squared));
     mid = (sig[0] + sig[1]) * 0.5;
     side = HPF.ar((sig[0] - sig[1]) * 0.5, 150);
-    Out.ar(busSpace, [mid + side, mid - side] * duck * 0.92);
+    Out.ar(busSpace, [mid + side, mid - side] * duck * 1.1);
   }),
 
   // THE SHARED ROOM: every sound passes through the same short early
@@ -525,9 +542,10 @@ defs = [
     sig = sig + (HPF.ar(sig, 3000) * 0.5);
     sig = ((sig * d) + bias).tanh - bias.tanh;
     sig = sig / (d * (1 - bias.tanh.squared));
-    sig = BHiShelf.ar(sig, 3000, 1, -4);
-    sig = BPeakEQ.ar(sig, 3400, 1.2, -3);
+    sig = BHiShelf.ar(sig, 3000, 1, -2.5);
+    sig = BPeakEQ.ar(sig, 3400, 1.2, -2);
     sig = BPeakEQ.ar(sig, 320, 1.0, -2.5);   // make room in the low-mids
+    sig = BPeakEQ.ar(sig, 200, 0.8, -1.5);
     sig = DelayC.ar(sig, 0.03, 0.006 + (LFNoise2.kr(0.7) * 0.0012 * w) + (SinOsc.kr(5.8) * 0.00015 * w));
     sig = sig + HPF.ar(PinkNoise.ar(hiss.lag(5) ! 2), 1500);
     sig = LPF.ar(sig, 12500);
@@ -644,6 +662,14 @@ score.add([0.0102, kdel.newMsg(Group.basicNew(server, 1),
 udel = Synth.basicNew(\echo, server);   // UNSYNCED delay: 311 ms / 467 ms, floats off the grid
 score.add([0.0103, udel.newMsg(Group.basicNew(server, 1),
   [\in, busUdel, \tL, 0.311, \tR, 0.467, \fb, 0.25, \mix, 0.35, \hp, 400, \lp, 5000, \toSherman, 0], \addToTail)]);
+wdel = Synth.basicNew(\echo, server);   // screech echo: half note left, dotted half right
+score.add([0.01031, wdel.newMsg(Group.basicNew(server, 1),
+  [\in, busWdel, \tL, 8 * stepDur, \tR, 12 * stepDur, \fb, 0.45, \mix, 0.8, \hp, 80, \lp, 2200,
+   \toSherman, 0, \mute, on.("screech")], \addToTail)]);
+whd = Synth.basicNew(\echo, server);    // whale echo: long and unsynced, dark repeats into the hall
+score.add([0.01032, whd.newMsg(Group.basicNew(server, 1),
+  [\in, busWhd, \tL, 0.83, \tR, 1.27, \fb, 0.55, \mix, 0.7, \hp, 150, \lp, 1800,
+   \toSherman, 0, \mute, on.("whales")], \addToTail)]);
 satbus = Synth.basicNew(\satbus, server);
 score.add([0.01035, satbus.newMsg(Group.basicNew(server, 1), [\drive, 3, \burger, 0.3, \mix, 0.3], \addToTail)]);
 sherman = Synth.basicNew(\sherman, server);
@@ -706,7 +732,7 @@ add.(at.(74), \chant, [\freq, root * 2, \amp, 0.45, \atk, 6, \sus, 14, \rel, 12,
 // the riser out of the void into the conjuration.
 [[30, 2], [38, 2], [44, 3.5], [49, 3], [58, 2], [62, 2], [66, 2], [70, 2], [74, 2]].do { |sw|
   var t0 = at.(sw[0]), dur = sw[1] * 16 * stepDur;
-  add.(t0, \swell, [\freq, root, \dur, dur, \amp, 0.3, \drive, rrand(3.0, 5.0), \pan, 0, \sherman, 0.2], "screech");
+  add.(t0, \swell, [\freq, root, \dur, dur, \amp, 0.42, \drive, rrand(3.5, 5.5), \pan, 0, \sherman, 0.15], "screech");
 };
 
 // WHALES, sparse, far in the background: [bar, shape, ratio of the glide, growl]
@@ -714,15 +740,19 @@ add.(at.(74), \chant, [\freq, root * 2, \amp, 0.45, \atk, 6, \sus, 14, \rel, 12,
  [50, 0, 0.7, 0.5], [62, 1, 1.4, 0], [77, 0, 1.25, 0.3], [81, 1, 1.6, 0]].do { |w|
   var f = root * [4, 6, 8].choose;
   add.(at.(w[0]), \whale, [\freq, f, \freq2, f * w[2], \dur, rrand(2.5, 4.5), \shape, w[1], \growl, w[3],
-    \amp, if((w[0] > 24) and: { w[0] < 47 } or: { (w[0] > 52) and: { w[0] < 76 } }) { 0.04 } { 0.07 },
+    \amp, if((w[0] > 24) and: { w[0] < 47 } or: { (w[0] > 52) and: { w[0] < 76 } }) { 0.055 } { 0.1 },
     \pan, rrand(-0.7, 0.7)], "whales");
 };
 
-// TORTURED CYMBALS at the doors of the piece
-[[8, 3], [20, 4], [36, 2.5], [44, 3.5], [48, 3], [56, 2.5], [64, 3], [74, 5]].do { |c|
-  add.(at.(c[0]), \cymbal, [\freq, pick.(220, 420), \amp, 0.7, \dur, c[1] * 16 * stepDur,
-    \bend, rrand(0.985, 0.995), \chatter, rrand(0.3, 0.8), \pan, rrand(-0.5, 0.5), \hall, 0.5, \sherman, 0.1]
-    ++ metalSpec.(\cymbal, 3), "cymbals");
+// TORTURED CYMBALS at the doors of the piece: a different one every time.
+// [bar, length in bars, mode (0 bow, 1 crash, 2 scrape, 3 reverse), body, pan]
+[[8, 3, 0, \cymbal, -0.6], [20, 4, 3, \gong, 0.55], [36, 2.5, 2, \plate, -0.45], [44, 3.5, 0, \sheet, 0.6],
+ [48, 3, 1, \cymbal, -0.3], [56, 2.5, 3, \plate, 0.5], [64, 3, 2, \cymbal, -0.6], [74, 5, 0, \gong, 0.4]].do { |c|
+  add.(at.(c[0]), \cymbal, [\freq, if(c[3] == \gong) { pick.(90, 180) } { pick.(220, 450) },
+    \amp, [0.7, 0.45, 0.6, 0.6][c[2]], \dur, c[1] * 16 * stepDur,
+    \bend, if(c[2] == 0) { rrand(0.985, 0.995) } { 1 }, \chatter, rrand(0.3, 0.8), \mode, c[2],
+    \tone, rrand(5500, 9000), \pan, c[4], \hall, rrand(0.4, 0.7), \sherman, 0.1]
+    ++ metalSpec.(c[3], if(c[2] == 1) { 5 } { 3 }), "cymbals");
 };
 
 // subs under the two big entries
@@ -783,7 +813,7 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
   // fixed off-step; a ghost tick before the downbeat in the conjuration.
   // Every 8th bar the hats breathe out for the second half of the bar.
   if(hush.not) {
-    var ap = (time * 2pi * 0.11).sin * 0.45;
+    var ap = 0.15 + ((time * 2pi * 0.11).sin * 0.15);   // closed hats: just right of centre
     var breath = (bar % 8 == 7) and: { st >= 8 };
     var k3 = (s div: 3) % 4;
     if(breath.not) {
@@ -795,10 +825,10 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
           \tone, [0.5, 0.65, 0.4, 0.7][k3], \pan, ap, \sherman, 0.03], "hats");
       };
       if(groove and: { bar >= 36 } and: { st == (if(bar.odd) { 10 } { 6 }) }) {
-        add.(time, \hat, [\amp, 0.095, \decay, 0.18, \tone, 0.35, \pan, ap.neg, \sherman, 0.08, \udel, 0.1], "hats");
+        add.(time, \hat, [\amp, 0.095, \decay, 0.18, \tone, 0.35, \pan, -0.35, \sherman, 0.08, \udel, 0.1], "hats");
       };
       if(conj and: { st == 15 }) {
-        add.(time, \hat, [\amp, 0.05, \decay, 0.02, \tone, 0.8, \pan, ap * -0.5], "hats");
+        add.(time, \hat, [\amp, 0.05, \decay, 0.02, \tone, 0.8, \pan, 0.6], "hats");
       };
     };
   };
@@ -806,12 +836,12 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
   // sparse percussion: rims 3-in-16, blocks 2-in-7, zaps 1-in-12, glitch rolls
   if(groove and: { hush.not } and: { bar >= 28 }) {
     if(rimP[st] == 1) {
-      add.(time, \click, [\type, 0, \freq, 900, \amp, 0.336, \decay, 0.05, \pan, (time * 2pi * 0.23).sin * 0.7,
+      add.(time, \click, [\type, 0, \freq, 900, \amp, 0.336, \decay, 0.05, \pan, -0.5 + ((time * 2pi * 0.23).sin * 0.12),
         \sherman, 0.15, \kdel, 0.2, \udel, 0], "sparse");
     };
     if(blockP[s % 7] == 1) {
       add.(time, \click, [\type, 1, \freq, pick.(500, 1100), \amp, 0.84, \decay, 0.12,
-        \pan, (time * 2pi * 0.13).cos * 0.6, \sherman, 0.1, \kdel, 0.1, \udel, 0.2], "sparse");
+        \pan, 0.5 + ((time * 2pi * 0.13).cos * 0.12), \sherman, 0.1, \kdel, 0.1, \udel, 0.2], "sparse");
     };
     if((bar % 8 == 7) and: { st >= 12 }) {
       add.(time, \click, [\type, 3, \freq, rrand(1500, 4000), \amp, 0.224, \decay, 0.06,
@@ -838,7 +868,7 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
       var args = [\freq, root * 2, \amp, 0.42, \dur, stepDur * [2, 4, 3, 6, 2][g % 5],
         \fmAmt, [1.2, 3.0, 2.0, 4.0, 1.6, 2.6, 3.4][g % 7], \cut, [550, 900, 700][g % 3],
         \drive, pw.(x, [[32, 3.5], [52, 4], [75, 4.5]]), \sherman, 0.7, \dly, 0.08, \sat, [0.15, 0.4][g % 2],
-        \pan, [-0.2, 0.2][g % 2]];
+        \pan, 0];
       add.(time, \growl, args, "bass");
       if(g % 4 == 3) { add.(time + (2 * stepDur), \growl, args ++ [\amp, 0.3, \pan, 0], "bass") };
     };
@@ -861,23 +891,23 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
   // frame drums: 5 in 12 (3 against 4)
   if((((bar >= 8) and: { bar < 48 }) or: { (bar >= 52) and: { bar < 80 } }) and: { frame[s % 12] == 1 } and: { hush.not }) {
     var low = (s % 12) < 6;
-    add.(time, \frame, [\freq, root * (if(low) { 2 } { 3 }), \amp, (if(low) { 0.1 } { 0.07 }) * rrand(0.85, 1.0),
-      \decay, if(low) { 0.7 } { 0.45 }, \hard, rrand(0.2, 0.4), \pan, if(low) { -0.3 } { 0.3 }], "perc");
+    add.(time, \frame, [\freq, root * (if(low) { 4 } { 6 }), \amp, (if(low) { 0.08 } { 0.056 }) * rrand(0.85, 1.0),
+      \decay, if(low) { 0.7 } { 0.45 }, \hard, rrand(0.2, 0.4), \pan, if(low) { -0.4 } { 0.45 }], "perc");
   };
 
   // ritual tom: tresillo in the grooves, a roll into the void
   if(groove and: { tom[s % 8] == 1 } and: { hush.not } and: { (bar < 46) or: { bar >= 48 } }) {
-    add.(time, \frame, [\freq, root * 1.5, \amp, 0.105, \decay, 0.9, \hard, 0.45, \pan, -0.1], "perc");
+    add.(time, \frame, [\freq, root * 3, \amp, 0.085, \decay, 0.9, \hard, 0.45, \pan, -0.1], "perc");
   };
   if(((bar == 46) and: { st % 2 == 0 }) or: { (bar == 47) and: { st < 8 } }) {
-    add.(time, \frame, [\freq, root * 1.5, \amp, (x - 46).linlin(0, 1.5, 0.08, 0.2), \decay, 0.6, \hard, 0.5, \pdrop, 1.0,
+    add.(time, \frame, [\freq, root * 3, \amp, (x - 46).linlin(0, 1.5, 0.08, 0.2), \decay, 0.6, \hard, 0.5, \pdrop, 1.0,
       \pan, rrand(-0.2, 0.2)], "perc");
   };
 
   // shaker: every 16th, accents every 3
   if(groove and: { hush.not } and: { s % 11 != 5 }) {
     add.(time, \shaker, [\amp, (if(s % 3 == 0) { 0.032 } { 0.014 }) * [1, 0.6, 0.8, 0.5, 0.9, 0.6, 0.7][s % 7],
-      \pan, (s * 0.05).sin * 0.5], "perc");
+      \pan, 0.6 + ((s * 0.05).sin * 0.1)], "perc");
   };
 
   // ritual bells (tingsha): every 6 sixteenths, two pitches alternating
@@ -890,14 +920,14 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
 
   // anvil: 3 in 5
   if(groove and: { bar >= 32 } and: { anvil[s % 5] == 1 } and: { hush.not }) {
-    add.(time, \metal, [\freq, pick.(500, 1100), \amp, 0.22, \dur, 0.3, \mode, 0, \hard, 0.55, \pan, 0.4,
+    add.(time, \metal, [\freq, pick.(500, 1100), \amp, 0.22, \dur, 0.3, \mode, 0, \hard, 0.55, \pan, 0.65,
       \dist, 0.3, \hall, 0.0, \gsend, 0.3, \out, busDrums, \dverb, 0.3] ++ metalSpec.(\bar, 0.35), "metal");
   };
 
   // clank backbeat in the conjuration
   if(conj and: { st == 12 }) {
     add.(time, \metal, [\freq, pick.(250, 450), \amp, 0.35, \dur, 0.3, \mode, 0, \hard, 0.6, \drive, 2,
-      \pan, -0.15, \dist, 0.2, \hall, 0.05, \gsend, 0.5, \out, busDrums, \dverb, 0.35] ++ metalSpec.(\plate, 0.4), "metal");
+      \pan, -0.3, \dist, 0.2, \hall, 0.05, \gsend, 0.5, \out, busDrums, \dverb, 0.35] ++ metalSpec.(\plate, 0.4), "metal");
   };
 
   // bell tolls in the invocation, the void and the closing
@@ -922,8 +952,8 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
   if(((bar >= 40) and: { bar < 47 }) or: { (bar >= 64) and: { bar < 76 } }) {
     if(pat[k % 6] == 1) {
       var accentT = (k % 3 == 0);
-      add.(time, \frame, [\freq, root * (if(accentT) { 4 } { 5 }), \amp, if(accentT) { 0.07 } { 0.04 },
-        \decay, 0.25, \hard, 0.6, \pan, if(k.even) { 0.55 } { 0.35 }, \dverb, 0.35], "perc");
+      add.(time, \frame, [\freq, root * (if(accentT) { 6 } { 8 }), \amp, if(accentT) { 0.07 } { 0.04 },
+        \decay, 0.25, \hard, 0.6, \pan, if(k.even) { 0.25 } { -0.25 }, \dverb, 0.35], "perc");
     };
   };
 };
@@ -943,7 +973,7 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
   var tick = euclid.(4, 9, 0);
   if((bar >= 52) and: { bar < 64 } and: { tick[s % 9] == 1 }) {
     add.(s * stepDur, \metal, [\freq, pick.(1200, 2200), \amp, 0.06, \dur, 0.2, \mode, 0, \hard, 0.3,
-      \pan, (s * stepDur * 2pi * 0.29).sin * 0.8, \dist, 0.5, \hall, 0.0, \gsend, 0.2, \out, busDrums,
+      \pan, 0.75, \dist, 0.5, \hall, 0.0, \gsend, 0.2, \out, busDrums,
       \dverb, 0.2, \udel, 0.15] ++ metalSpec.(\bar, 0.2), "metal");
   };
 };

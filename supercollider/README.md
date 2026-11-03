@@ -37,10 +37,11 @@ run through a bass bus: high-pass at 55 Hz, compression, parallel mid grit
 (heard on phones), distortion, mono lows, and a heavy duck under the kick.
 
 **Industrial bass screeches:** a grinding bass tone whose fixed resonances
-(the root's 3rd, 5th, 7th, 9th and 13th harmonics) ring louder and tighter
-while noise, crackle and distortion grow. Nothing sweeps, so nothing shifts
-in pitch. It cuts on the downbeat, while the Sherman's resonance and drive
-swell in sync.
+(the root's 3rd, 5th, 7th, 9th and 13th harmonics, plus a comb on its
+octave) ring louder and tighter while noise, crackle and distortion grow.
+Nothing sweeps, so nothing shifts in pitch, and it cuts on the downbeat.
+The low body stays dry and centred. The resonant part is thrown wide, far
+back into the hall and a long tempo echo (half note / dotted half).
 
 **Hats:** a hypnotic pulse on every 3rd sixteenth, with accents cycling in
 4s (it loops every 12 steps against the bar). Plus an open hat on a fixed
@@ -53,10 +54,20 @@ the bass go into a parallel bus: warm low-shelf-pushed tube saturation with a
 dark tone filter, plus diode-style mid clipping. It's mixed under the clean
 signal, and part of it continues into the Sherman.
 
-**Tortured cymbals** at the doors of the piece: bowed, dense inharmonic
-modes, surging pressure, stick-slip chatter, a slight bend, saturation.
+**Tortured cymbals** at the doors of the piece, a different one every time:
+bowed (surging pressure, stick-slip chatter, a slight bend), struck crash,
+scraped or reversed swell. Each uses a different body (cymbal, gong, plate,
+sheet), pitch, tone and side.
 **Whales**, sparse and far away: slow gliding calls through a flanger, the
-hall and the unsynced echo.
+hall and their own long echo (0.83 / 1.27 s).
+
+**Stereo map:** kick, bass, screech body and sub in the centre (mono below
+120 Hz). Closed hats just right of centre, open hat left, ghost ticks
+right. Rims left, wood blocks right, shaker right, anvil right, metal ticks
+far right, clank left, frame drums split low-left / high-right, triplet
+hand drums alternating. Cymbals, whales, chant, braams and the screech tails
+wide. Percussion is tuned above the bass range, and there's a dip at
+200-300 Hz on the bass bus and the master against mud.
 
 **Space:** a short room for everything, a short plate for the drums, a long
 hall only for the atmospheres. Tempo echoes are used sparingly, and an
