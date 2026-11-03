@@ -70,6 +70,18 @@ rotator, so its polarity never flips) and the hall width is mono-safe.
 Checked per band: lows mono (corr 1.0), low-mids 0.91, mids 0.66,
 presence 0.45; the whole track loses 0.15 dB when summed to mono.
 
+**Reference-matched mix (v10):** balanced against two Falsa Ilusión
+references (FAI AR 12). The boom at 60-120 Hz is reduced at the source: the
+saturation send has a gentle low push and a 100 Hz dip, the kick has dips at
+75/95 Hz with more clean sub, the bass bus dips at 90/180/280 Hz, the drum
+bus at 100/200 Hz, and the Sherman return is high-passed at 150 Hz. The
+mids are denser and wider: parallel saturation of 250 Hz-3.5 kHz on the bass
+bus, driven differently left and right. Presence comes up 3.5 dB at 4 kHz,
+air comes down from 6 kHz, and the tape hiss is halved. A soft clipper feeds
+a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
+(not squashed). Phase checked: mono-sum loss is 0.0-0.3 dB below 300 Hz and
+1.2-1.8 dB in the mids.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 120 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Rims left, wood blocks right, shaker right, anvil right, metal ticks

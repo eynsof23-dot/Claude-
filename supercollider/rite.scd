@@ -100,7 +100,9 @@ defs = [
     dl = LPF.ar(HPF.ar(dl, 40), 900) * EnvGen.ar(Env.perc(0.002, 0.3, 1, -3)) * dist;  // low, warm grit
     sub = (((sub * drive * 1.3) + 0.1).tanh - 0.1.tanh) * (1.6.tanh / (drive * 1.3).tanh);
     fmSig = (fmSig * (1 + drive)).tanh * fm;
-    body = (sub * 0.95) + click + (fmSig * 0.7) + (dl * 0.6);
+    body = (sub * 1.1) + click + (fmSig * 0.7) + (dl * 0.6);
+    body = BPeakEQ.ar(body, 95, 1.0, -4);   // keep the weight in the sub, not the boom
+    body = BPeakEQ.ar(body, 75, 0.9, -3);
     Out.kr(ctlDuck, EnvGen.kr(Env.perc(0.001, 0.28, 1, -3)));
     Out.ar(busDrums, ((body * amp) ! 2) * (1 - mute));
     Out.ar(busSherman, (fmSig * amp * sherman) ! 2);
@@ -297,6 +299,7 @@ defs = [
     var y2 = BPF.ar(y1, (cut * 2.4).clip(40, 14000), rq * 1.5) * 2;
     var sig = LPF.ar(LeakDC.ar(((y1 * 0.6) + (y2 * 0.9)).tanh), 9000) * 0.5 * mix * (1 + (sw * 1.5));
     sig = [sig[0], (sig[1] * 0.6) + (DelayN.ar(sig[1], 0.02, 0.011) * 0.5)];   // a little width
+    sig = HPF.ar(sig, 150);   // the Sherman is a mid-range effect: no boom from it
     Out.ar(busSpace, sig * (1 - mute));
     Out.ar(busHall, sig * 0.1 * (1 - mute));
   }),
@@ -310,13 +313,14 @@ defs = [
   //  * a share continues into the Sherman for the resonant squelch
   SynthDef(\satbus, { |drive = 3, burger = 0.3, tone = 2200, mix = 0.6, toSherman = 0.25|
     var in = In.ar(busSat, 2);
-    var x = BLowShelf.ar(in, 150, 1, 6);
+    var x = BLowShelf.ar(in, 150, 1, 2);   // gentle low push (a big one added boom and limiter pumping)
     var decap = ((x * drive.lag(2)) + 0.25).tanh - 0.25.tanh;
     var burg = (BPF.ar(in, 900, 1.5) * drive.lag(2) * 3).clip2(0.5) * 2;
     var sig;
     decap = LPF.ar(decap, tone.lag(2));
     burg = LPF.ar(HPF.ar(burg, 300), 3000);
     sig = LeakDC.ar(decap + (burg * burger)) * mix;
+    sig = BPeakEQ.ar(sig, 100, 0.8, -6);   // warmth without boom in 70-150 Hz (reference match)
     sig = Compander.ar(sig, sig, 0.3, 1, 0.5, 0.005, 0.1);
     Out.ar(busSpace, sig);
     Out.ar(busSherman, sig * toSherman);
@@ -327,6 +331,8 @@ defs = [
   SynthDef(\drumbus, { |thresh = 0.3, sat = 1.25|
     var in = In.ar(busDrums, 2);
     var sig = Compander.ar(in, in, thresh, 1, 1/3, 0.005, 0.12);
+    sig = BPeakEQ.ar(sig, 100, 1.0, -2.5);   // reference match: kick weight stays in the sub, not the boom
+    sig = BPeakEQ.ar(sig, 200, 1.0, -3);     // drum bodies out of the low-mids
     sig = ((sig * sat) + 0.1).tanh - 0.1.tanh;
     sig = sig / (sat * (1 - 0.1.tanh.squared));
     Out.ar(busSpace, sig);
@@ -498,14 +504,15 @@ defs = [
 
   // BASS BUS: compression, distortion, mono below 150 Hz, and a heavy duck
   // under every kick so kick and bass punch through each other.
-  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0|
+  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.42|
     var in = In.ar(busLow, 2);
     var duckC = In.kr(ctlDuck).clip(0, 1);
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
     var mid, side, lo, hi;
     sig = Compander.ar(sig, sig, 0.3, 1, 1/3, 0.005, 0.15);
+    sig = BPeakEQ.ar(sig, 90, 0.8, -4);      // reference match: less boom in 60-120
+    sig = BPeakEQ.ar(sig, 180, 1.0, -3.5);
     sig = BPeakEQ.ar(sig, 280, 1.0, -2.5);   // keep the low-mids clean
-    sig = BPeakEQ.ar(sig, 650, 0.9, -2);     // leave the mids to chant, percussion, Sherman, screech tails
     sig = sig + ((LPF.ar(HPF.ar(sig, 150), 1200) * 2.5).tanh * 0.18);  // parallel mid grit: heard on phones
     sig = ((sig * sat) + 0.15).tanh - 0.15.tanh;
     sig = sig / (sat * (1 - 0.15.tanh.squared));
@@ -516,7 +523,17 @@ defs = [
     sig = (lo * (1 - (duckC * duckAmt))) + (hi * (1 - (duckC * 0.75)));
     mid = (sig[0] + sig[1]) * 0.5;
     side = HPF.ar((sig[0] - sig[1]) * 0.5, 150);
-    Out.ar(busSpace, [mid + side, mid - side] * 1.1);
+    sig = [mid + side, mid - side];
+    // WIDE MID SATURATION (where mental tekno lives): the 250 Hz - 3.5 kHz band
+    // is saturated separately left and right (different drive, micro-delays),
+    // then mixed in parallel: dense, aggressive, wide mids; lows stay mono.
+    {
+      var m = LPF.ar(HPF.ar(sig.sum * 0.5, 250), 3500);
+      var l = ((DelayN.ar(m, 0.01, 0.003) * 3.0) + 0.2).tanh - 0.2.tanh;
+      var r = ((DelayN.ar(m, 0.01, 0.007) * 3.6) + 0.15).tanh - 0.15.tanh;
+      sig = sig + (LPF.ar([l, r], 4000) * midSat);
+    }.value;
+    Out.ar(busSpace, sig * 1.1);
   }),
 
   // THE SHARED ROOM: every sound passes through the same short early
@@ -532,7 +549,7 @@ defs = [
 
   // Master: long hall (pre-delayed, widened), then the tape, a de-harsh EQ
   // for the 3-4 kHz zone, glue and a limiter.
-  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.004, hallMix = 0.8, gain = 1,
+  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5,
       fade = 1, fadeTime = 3|
     var sig = In.ar(busMix, 2);
     var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 160), 0.05, 0.045),
@@ -550,8 +567,8 @@ defs = [
     sig = sig + (HPF.ar(sig, 3000) * 0.5);
     sig = ((sig * d) + bias).tanh - bias.tanh;
     sig = sig / (d * (1 - bias.tanh.squared));
-    sig = BHiShelf.ar(sig, 3000, 1, -2.5);
-    sig = BPeakEQ.ar(sig, 3400, 1.2, -2);
+    sig = BPeakEQ.ar(sig, 4000, 0.8, 3.5);   // reference match: presence
+    sig = BHiShelf.ar(sig, 6000, 1, -5);       // reference match: less air
     sig = BPeakEQ.ar(sig, 320, 1.0, -2.5);   // make room in the low-mids
     sig = BPeakEQ.ar(sig, 200, 0.8, -1.5);
     sig = DelayC.ar(sig, 0.03, 0.006 + (LFNoise2.kr(0.7) * 0.0012 * w) + (SinOsc.kr(5.8) * 0.00015 * w));
@@ -568,7 +585,9 @@ defs = [
     md = Compander.ar(md, md, 0.25, 1, 1/2, 0.008, 0.15);
     hi = Compander.ar(hi, hi, 0.12, 1, 1/2.5, 0.003, 0.1);
     sig = lo + md + hi;
-    sig = Limiter.ar(sig * gain * Lag.kr(fade, fadeTime), 0.93, 0.01);
+    sig = sig * gain * Lag.kr(fade, fadeTime);
+    sig = (sig * clip).tanh / clip.tanh;      // soft clipper: rounds the peaks before the limiter
+    sig = Limiter.ar(sig, 0.89, 0.01);   // ceiling -1 dBFS
     Out.ar(0, sig);
   })
 ];
@@ -679,7 +698,7 @@ score.add([0.01032, whd.newMsg(Group.basicNew(server, 1),
   [\in, busWhd, \tL, 0.83, \tR, 1.27, \fb, 0.55, \mix, 0.7, \hp, 150, \lp, 1800,
    \toSherman, 0, \mute, on.("whales")], \addToTail)]);
 satbus = Synth.basicNew(\satbus, server);
-score.add([0.01035, satbus.newMsg(Group.basicNew(server, 1), [\drive, 3, \burger, 0.3, \mix, 0.3], \addToTail)]);
+score.add([0.01035, satbus.newMsg(Group.basicNew(server, 1), [\drive, 3, \burger, 0.3, \mix, 0.26], \addToTail)]);
 sherman = Synth.basicNew(\sherman, server);
 score.add([0.0104, sherman.newMsg(Group.basicNew(server, 1),
   [\step, stepDur, \base, 250, \reso, 0.8, \drive, 4, \mix, 0.5, \mute, on.("sherman")], \addToTail)]);
@@ -697,7 +716,7 @@ score.add([0.0114, bassbus.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 space = Synth.basicNew(\space, server);
 score.add([0.012, space.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 master = Synth.basicNew(\master, server);
-score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 1.45], \addToTail)]);
+score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 1.3, \clip, 1.2], \addToTail)]);
 
 // ---------------------------------------------------------------------------
 // LONG GESTURES
@@ -821,7 +840,7 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
   // fixed off-step; a ghost tick before the downbeat in the conjuration.
   // Every 8th bar the hats breathe out for the second half of the bar.
   if(hush.not) {
-    var ap = 0.15 + ((time * 2pi * 0.11).sin * 0.15);   // closed hats: just right of centre
+    var ap = if((s div: 3).even) { 0.5 } { -0.45 };   // closed hats alternate sides: width up top
     var breath = (bar % 8 == 7) and: { st >= 8 };
     var k3 = (s div: 3) % 4;
     if(breath.not) {
@@ -829,7 +848,7 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
         add.(time, \hat, [\amp, 0.055, \decay, 0.03, \pan, ap, \tone, 0.5], "hats");
       };
       if(groove and: { s % 3 == 0 }) {
-        add.(time, \hat, [\amp, 0.12 * [1, 0.55, 0.8, 0.45][k3], \decay, [0.03, 0.02, 0.045, 0.02][k3],
+        add.(time, \hat, [\amp, 0.1 * [1, 0.55, 0.8, 0.45][k3], \decay, [0.03, 0.02, 0.045, 0.02][k3],
           \tone, [0.5, 0.65, 0.4, 0.7][k3], \pan, ap, \sherman, 0.03], "hats");
       };
       if(groove and: { bar >= 36 } and: { st == (if(bar.odd) { 10 } { 6 }) }) {
@@ -920,7 +939,7 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
 
   // ritual bells (tingsha): every 6 sixteenths, two pitches alternating
   if((((bar >= 10) and: { bar < 47 }) or: { (bar >= 52) and: { bar < 76 } }) and: { s % 6 == 0 }) {
-    add.(time, \metal, [\freq, tingsha[(s div: 6) % 2], \amp, if(rite or: { conj }) { 0.16 } { 0.12 }, \dur, 0.5,
+    add.(time, \metal, [\freq, tingsha[(s div: 6) % 2], \amp, if(rite or: { conj }) { 0.1 } { 0.08 }, \dur, 0.5,
       \mode, 0, \hard, 0.35, \pan, if((s div: 6).even) { -0.5 } { 0.5 }, \dist, 0.55, \hall, 0.3, \gsend, 0.5,
       \out, busDrums, \dverb, 0.2, \udel, 0.1]
       ++ metalSpec.(\bell, 1.2), "metal");
@@ -928,7 +947,7 @@ add.(at.(52), \detritus, [\amp, 0.45, \density, 6, \dur, 24 * 16 * stepDur], "de
 
   // anvil: 3 in 5
   if(groove and: { bar >= 32 } and: { anvil[s % 5] == 1 } and: { hush.not }) {
-    add.(time, \metal, [\freq, pick.(500, 1100), \amp, 0.22, \dur, 0.3, \mode, 0, \hard, 0.55, \pan, 0.65,
+    add.(time, \metal, [\freq, pick.(500, 1100), \amp, 0.15, \dur, 0.3, \mode, 0, \hard, 0.55, \pan, 0.65,
       \dist, 0.3, \hall, 0.0, \gsend, 0.3, \out, busDrums, \dverb, 0.3] ++ metalSpec.(\bar, 0.35), "metal");
   };
 
@@ -1004,8 +1023,8 @@ set.(at.(44), sherman, [\mix, 0.15]);   // calm the Sherman in the build: no squ
 set.(at.(48), sherman, [\mix, 0.5, \base, 180, \reso, 0.85, \drive, 3]);
 set.(at.(52), sherman, [\base, 320, \reso, 0.9, \drive, 5, \lfoAmt, 0.2]);
 set.(at.(76), sherman, [\base, 200, \reso, 0.7, \drive, 3]);
-set.(at.(76), master, [\drive, 1.5, \wow, 1.2, \hiss, 0.006]);
-set.(at.(80), master, [\wow, 2.2, \drive, 1.8, \hiss, 0.008]);
+set.(at.(76), master, [\drive, 1.5, \wow, 1.2, \hiss, 0.004]);
+set.(at.(80), master, [\wow, 2.2, \drive, 1.8, \hiss, 0.005]);
 set.(at.(81), master, [\fadeTime, 5, \fade, 0]);
 
 score.add([total, [\c_set, 0, 0]]);
