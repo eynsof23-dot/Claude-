@@ -7,7 +7,7 @@ in the cloud. The producer listens on their **phone** (MP3s sent with
 SendUserFile) and gives feedback by ear. They are not a coder, so keep
 replies about the music: what changed and what it sounds like.
 
-The current track is **RITE**: `supercollider/rite.scd`, 110 BPM, about 3:03.
+The current track is **RITE**: `supercollider/rite.scd`, 110 BPM, about 6:00 (since v14).
 Its version history and every design decision are in
 `supercollider/README.md`. Read that before changing anything. Work on
 branch `claude/music-recommendation-tool-237qop` unless told otherwise.
@@ -76,15 +76,15 @@ with `supercollider/tools/mixcheck.py bands`. The nine (v13): Primitif & Shivir
 Rhebulp (120) and Vector (140), Ciklo - Clavos y Piedras (110), Andiela - Aöm
 (102), Andiela vs SexWords - Cautela, Absorto, Envanecimiento (110).
 
-| band | ref median | ref range | RITE v13 (peak) |
+| band | ref median | ref range | RITE v14 (grooves) |
 |---|---|---|---|
 | sub 20-60 | -1.9 | -5.1 … -0.7 | -1.2 |
-| low 60-120 | -11.6 | -14.5 … -6.8 | -12.8 |
-| lowmid 120-300 | -10.8 | -17.6 … -7.8 | -11.4 |
-| mid-lo 300-800 | -11.6 | -19.9 … -6.0 | -11.4 |
-| mid 800-2.5k | -12.6 | -17.1 … -7.3 | -14.2 / -13.0 |
-| presence 2.5-6k | -23.4 | -25.3 … -17.7 | -25.1 / -23.2 |
-| air 6-15k | -31.2 | -35.8 … -20.1 | -32.1 |
+| low 60-120 | -11.6 | -14.5 … -6.8 | -11.9 … -12.9 |
+| lowmid 120-300 | -10.8 | -17.6 … -7.8 | -11.3 … -12.9 |
+| mid-lo 300-800 | -11.6 | -19.9 … -6.0 | -11.1 … -12.5 |
+| mid 800-2.5k | -12.6 | -17.1 … -7.3 | -13.4 … -14.4 |
+| presence 2.5-6k | -23.4 | -25.3 … -17.7 | -19.8 … -22.3 |
+| air 6-15k | -31.2 | -35.8 … -20.1 | -28.0 … -31.4 |
 
 - **References:**
   - Loud parts at -9.5 to -5.8 LUFS (median -7.9).
@@ -93,9 +93,20 @@ Rhebulp (120) and Vector (140), Ciklo - Clavos y Piedras (110), Andiela - Aöm
   - Peakiness 1.4-4.5 dB.
   - The kick's harmonics (150 Hz-2 kHz) sit at -2 to -10 dB vs its sub
     (median -7.6). The kick is tuned to 40-51 Hz.
-- **RITE v13:**
-  - Loud parts at -7.9 LUFS, peak -0.9 dBFS, crest 6.4-6.7 dB.
-  - Mono-sum loss 0.18 dB, peakiness 2.2 dB, kick harmonics -8.8 dB.
+- **References, stereo and movement:** side/mid median -5.2 dB, air
+  correlation median 0.71. The air moves 2.8-5.2 dB (std) between 16 s blocks
+  in the grooves.
+- **References, arrangement:** 5-7:47 long, flat loudness in the grooves,
+  16 s breaks that drop the kick and sub but keep the textures, the peak in
+  the last third.
+- **RITE v14:**
+  - Grooves at -7.9 to -8.4 LUFS, peak -0.9 dBFS, crest 6.4-7.0 dB.
+  - Mono-sum loss 0.14 dB, side/mid -5 dB, mid correlation 0.5.
+  - Air moves 2.5 dB between blocks (still at the calm end).
+- **Clash and harshness check:** render every layer with `SOLO=<layer>` and
+  compare the stems against the mix. Look at masking pairs per 1/3 octave,
+  2.5-6 kHz spikes per minute and who causes them, and how many layers are
+  audible at once.
 - **The old two-clip targets (v10-v12)** matched only the darker of the two
   clips. The nine-track set wants 3-4 dB more at 800 Hz-6 kHz and a little less sub.
 

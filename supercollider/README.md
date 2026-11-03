@@ -6,27 +6,33 @@ sc3-plugins (for the JPverb reverb). `./render.sh [seed] [piece]`, or open a
 different take on the same form. `SOLO=<layer>` renders a single layer, so
 you can export stems.
 
-## RITE (`rite.scd`): 3:03, 110 BPM
+## RITE (`rite.scd`): 6:00, 110 BPM
 
 Ceremonial electroacoustic and death-industrial. Every sound plays into one
 shared space (a short room, then console saturation, tape and a long hall),
-on a single 16th-note grid with polyrhythms.
+on a single 16th-note grid with polyrhythms. The 6-minute form (v14)
+follows the map of nine Falsa Ilusión references: a slow intro, flat
+grooves where elements rotate every 8 bars, two 16 s breaks that drop the
+kick and sub but keep the textures, and the peak in the last third.
 
-| Time | Section |
-|---|---|
-| 0:00 | **Invocation.** Gong swell, bell tolls, low chant with throat-singing overtones |
-| 0:17 | **Procession.** Frame drums 5-in-12, ritual bells every 6 sixteenths, half-time kick, dub bass teaser, braam |
-| 0:52 | **The rite.** Kick and bass talking ("boom, da-da"), bass tape echo, tresillo tom, anvil 3-in-5, braams |
-| 1:45 | **The void.** Cut: gong, bells, full choir |
-| 1:53 | **Conjuration.** The peak: industrial noise bed, tortured bowed metal, clank backbeat |
-| 2:46 | **Closing.** The beat leaves, echo tails, tolls; the tape wobbles and fades |
+| Time | Bars | Section |
+|---|---|---|
+| 0:00 | 0-8 | **Invocation.** Gong swell, bell tolls, low chant with throat-singing overtones |
+| 0:17 | 8-24 | **Procession.** Frame drums 5-in-12, ritual bells, half-time kick, dub bass teaser, braam, the air opens |
+| 0:52 | 24-56 | **The rite.** Kick 3-3-2-2 and bass talking, tresillo tom, hand percussion, grit, anvil, growls; modular sequence A enters at 1:45 |
+| 2:02 | 56-64 | **The void** (break). Gong, bells, full choir, sequence A alone in its echo, machine room |
+| 2:20 | 64-96 | **Conjuration.** Kick 4-4-3-3, clank backbeat, metal ticks, noise bed, sequence B with the tempo echo |
+| 3:29 | 96-104 | **The descent** (break). The low growl alone with the drone, the long screech, sequence B, tolls, a tom roll into the peak |
+| 3:47 | 104-144 | **The peak.** Kick 3-3-2-2-4-4-3-3 (24 steps), never a straight four; sequence C, hats accenting in 5s, 5-against-4 metal, sequence A returns at the end |
+| 5:14 | 144-164 | **Closing.** The kick walks out, echo tails, tolls, the tape wobbles and fades |
 
 **Kick:** a clean sub, an FM "tok" (loud only in the half-time procession,
 where it feeds the Sherman and a tempo echo) and a low, warm distortion
 layer (40-900 Hz). Drive and distortion change on every step and are
 automated per section. The pattern is a polymeter: 3-3-2-2 (10 steps) in
 the rite, 4-4-3-3 (14 steps) in the first half of the peak, straight four
-only at the climax. The bar downbeats are always anchored. The kick owns
+only at the climax (v14: no more straight four anywhere; the peak uses
+3-3-2-2-4-4-3-3, 24 steps). The bar downbeats are always anchored. The kick owns
 everything below 55 Hz.
 
 **Bass (sparse, root only, no sweeps):** distorted sub booms with a short
@@ -170,6 +176,53 @@ a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
   broken one-bar pattern (Nosh - Vector at 140). Hats and percussion run
   3-, 5-, 9- and 11-step cycles. Ciklo's bass answers the kick on the 3rd 16th.
 
+**v14 (6 minutes, checked against the nine references):**
+- **The form** is above. Elements rotate by bar range (`ranges` in the
+  score): typically 4-5 layers are audible at once, 6-7 at the 90th percentile.
+  That's the same density as the 3-minute v13, even with the new elements.
+- **No straight four.** The climax's 4/4 kick is gone. The peak joins the rite's
+  and the conjuration's patterns (3-3-2-2-4-4-3-3, 24 steps against the bar)
+  and goes back to 4-4-3-3 for its last 8 bars.
+- **New sounds:**
+  - Three sparse modular sequences, `lpg`: low-pass-gate pings with phase
+    modulation and a wavefolder. Fixed notes from the root's harmonic
+    field, no glides, no resonance. The timbre moves on 2/3/5/7 cycles.
+    A plays 5-in-13, B 4-in-11 (metallic, tempo echo), C 3-in-7 (woody).
+  - `air`: continuous high air, partly correlated noise drifting between
+    5.5 and 9.5 kHz with tape dust, its level set per 8-bar phrase.
+  - `machine`: a distant room tone for the breaks.
+- **Clashes, measured from the solo stems:**
+  - The tom (3x the root, 147 Hz) and the low frame drum (4x) sat on the
+    kick's body at 135 Hz in 77% of frames. They're now at 5x, 6x and 9x,
+    high-passed at 170 Hz, with a softer strike. The clash score went from
+    5.6 to 1.7.
+  - The bass's 150-220 Hz now ducks fully under the kick, and the bass bus
+    has a 135 Hz dip.
+  - The Sherman is low-passed at 5.5 kHz and dipped at 850 Hz, where it
+    stacked on the bass.
+- **Harshness:** 2.5-6 kHz spikes went from 471 to 141 per minute in the rite,
+  and from 366 to 147 in the peak.
+  - The kick's click is softer (1.5 ms attack, darker) and its FM index is
+    lower.
+  - Its own tape pre-emphasis is gentler.
+  - The hats have a 2 ms attack, are high-passed at 6 kHz and are a little
+    quieter.
+  - What's left is mostly the kick's own transient.
+- **Top end and stereo:**
+  - Air at -28 to -31 dB (the refs' median is -31.2), air crest 26-29 dB
+    (refs about 28.6), air correlation 0.64-0.70 (refs median 0.71).
+  - The air bed and the hats change level per phrase, so the top end moves
+    while the floor holds.
+  - The mids are narrower (side x0.85 on the master, a smaller L/R offset in
+    the bass's mid saturation): correlation is about 0.5 and side/mid -5 dB,
+    both the refs' median. Before, they were 0.3 and -2.8 dB.
+- **Result:**
+  - Every band inside the references' range.
+  - Grooves at -7.9 to -8.4 LUFS, peak -0.9 dBFS, crest 6.4-7.0 dB.
+  - Mono-sum loss 0.14 dB.
+  - Pilot test: the kick moves the other tones by 1.4 dB at most, in every
+    section.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 160 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Hand skin left, hollow log right, grit alternating left/right, shaker right, anvil right, metal ticks
@@ -203,7 +256,7 @@ hand drums on triplet 8ths (3 against 4) and a metal pulse of 5 per bar
 - On the master: tape, de-harsh EQ, 3-band multiband compression, mono
   lows, limiter.
 
-Layers: `kick bass cymbals whales sherman hats sparse grit screech braam metal chant perc noise sub detritus grains`
+Layers: `kick bass cymbals whales sherman hats sparse grit seq air machine screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 
