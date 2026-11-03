@@ -57,7 +57,7 @@ var solo = "SOLO".getenv;
 var outPath = "OUT".getenv ? (thisProcess.nowExecutingPath.dirname +/+ "rite.wav");
 var bpm = 112, stepDur = 15 / bpm, bars = 84, total = bars * 16 * stepDur;
 var busSpace = 16, busHall = 18, busGrain = 20, busBass = 22, busMix = 24, ctlDuck = 10;
-var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44, busKick = 46;
+var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44, busKick = 46, busKickM = 48, busKsat = 50, busRoom = 52;
 var busSdel = busBass;  // the old bass echo bus now carries the screech echo
 var opts, server, score, defs, add, set, on, pw, euclid, metalSpec, root, field, pick, at;
 var wdel, whd, satbus, lowP, ksat, bassbus, boomP, growlP, kdrive, ksend, kN = 0, kpA, kpB, kdistC, hatA, hatO, hatG, hatTone, udel, dverb, atmosbus, echo, kdel, sherman, drumbus, grainer, space, master, frame, tom, anvil, accent, cycle, cyclePeak, bassN = 0;
@@ -101,9 +101,9 @@ defs = [
     sub = (((sub * drive * 1.3) + 0.1).tanh - 0.1.tanh) * (1.6.tanh / (drive * 1.3).tanh);
     // LOW SATURATION for weight: symmetric drive on the sub adds odd harmonics
     // (3x, 5x the root), heard as weight on any speaker, without the boomy 2nd
-    sub = (sub * 2.2).tanh / 2.2.tanh;
+    sub = (sub * 2.8).tanh / 2.8.tanh;
     fmSig = (fmSig * (1 + drive)).tanh * fm;
-    body = (sub * 1.3) + click + (fmSig * 0.7) + (dl * 0.6);
+    body = (sub * 1.3) + click + (fmSig * 0.7) + (dl * 0.9);   // more grit: the kick's harmonics carry it on any speaker
     body = BPeakEQ.ar(body, 95, 1.0, -4);   // keep the weight in the sub, not the boom
     body = BPeakEQ.ar(body, 75, 0.9, -3);
     Out.kr(ctlDuck, EnvGen.kr(Env.perc(0.001, 0.28, 1, -3)));
@@ -111,7 +111,8 @@ defs = [
     Out.ar(busSherman, (fmSig * amp * sherman) ! 2);
     Out.ar(busKdel, (fmSig * amp * kdel) ! 2);
     Out.ar(busDverb, (fmSig * amp * 0.1) ! 2);
-    Out.ar(busSat, ((sub + (dl * 0.5)) * amp * sat ! 2) * (1 - mute));   // parallel saturation send
+    Out.ar(busKsat, ((sub + (dl * 0.5)) * amp * sat ! 2) * (1 - mute));   // parallel saturation send (own wire)
+    Out.ar(busRoom, (((fmSig * 0.7) + (dl * 0.6)) * amp * 0.2 ! 2) * (1 - mute));   // room send: the grit and the tok, never the sub
   }),
 
   // SWELL (the industrial bass screech): a grinding bass tone (saws on the
@@ -272,12 +273,15 @@ defs = [
   // Tape echo (used twice: bass, and the kick's FM layer): left/right
   // times differ, cross-fed, every repeat thinner, darker and a little more
   // saturated, with slight wobble. Can feed the Sherman too.
-  SynthDef(\echo, { |in = 22, tL = 0.4, tR = 0.53, fb = 0.5, mix = 0.8, hp = 250, lp = 2800, toSherman = 0, mute = 0|
+  SynthDef(\echo, { |in = 22, tL = 0.4, tR = 0.53, fb = 0.5, mix = 0.8, hp = 250, lp = 2800, toSherman = 0, mute = 0, room = 0.12, duckAmt = 0.35|
     var input = In.ar(in, 2);
+    var duck = 1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt);   // ducked delays: the repeats breathe around the kick
     var local = LocalIn.ar(2);
     var dl = DelayC.ar(input + local, 2, [tL, tR] + (LFNoise2.kr(0.5 ! 2) * 0.002));
     LocalOut.ar((LPF.ar(HPF.ar(dl.reverse, hp), lp) * fb * 1.3).tanh / 1.3);
+    dl = dl * duck;
     Out.ar(busSpace, dl * mix * (1 - mute));
+    Out.ar(busRoom, dl * mix * room * (1 - mute));
     Out.ar(busHall, dl * 0.25 * (1 - mute));
     Out.ar(busSherman, dl * toSherman);
   }),
@@ -289,8 +293,9 @@ defs = [
   // every 16th (smoothed). "swell" is the hand on the knobs: resonance up,
   // drive up, level up (the cutoff does not sweep, so nothing slides in pitch).
   SynthDef(\sherman, { |base = 250, reso = 0.75, envAmt = 0.3, lfoAmt = 0.15, drive = 4, mix = 1, step = 0.134,
-      swell = 0, swellTime = 1, mute = 0|
+      swell = 0, swellTime = 1, mute = 0, room = 0.18, duckAmt = 0.25|
     var in = In.ar(busSherman, 2);
+    var duck = 1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt);
     var sw = VarLag.kr(swell, swellTime, 4);
     var env = Amplitude.kr(in.sum, 0.002, 0.12);
     var lfo = SinOsc.kr(1 / (step * 7));
@@ -303,7 +308,9 @@ defs = [
     var sig = LPF.ar(LeakDC.ar(((y1 * 0.6) + (y2 * 0.9)).tanh), 9000) * 0.5 * mix * (1 + (sw * 1.5));
     sig = [sig[0], (sig[1] * 0.6) + (DelayN.ar(sig[1], 0.02, 0.011) * 0.5)];   // a little width
     sig = HPF.ar(sig, 150);   // the Sherman is a mid-range effect: no boom from it
+    sig = sig * duck;
     Out.ar(busSpace, sig * (1 - mute));
+    Out.ar(busRoom, sig * room * (1 - mute));
     Out.ar(busHall, sig * 0.1 * (1 - mute));
   }),
 
@@ -314,34 +321,46 @@ defs = [
   //    then a dark tone filter: thick, warm, low saturation
   //  * "burger": a harder diode-style clip on the mids, contoured
   //  * a share continues into the Sherman for the resonant squelch
-  SynthDef(\satbus, { |drive = 3, burger = 0.3, tone = 2200, mix = 0.6, toSherman = 0.25|
-    var in = In.ar(busSat, 2);
+  SynthDef(\satbus, { |drive = 3, burger = 0.3, tone = 2200, mix = 0.6, toSherman = 0.25, room = 0.1, kroom = 0.15, duckAmt = 0.6, kgain = 1.3|
+    // channels 0-1: the bass layers; 2-3: the kick. Same processing, but each
+    // pair saturates on its own, so the kick never squeezes the bass
+    var in = In.ar(busSat, 2) ++ In.ar(busKsat, 2);
     var x = BLowShelf.ar(in, 150, 1, 2);   // gentle low push (a big one added boom and limiter pumping)
     var decap = ((x * drive.lag(2)) + 0.25).tanh - 0.25.tanh;
     var burg = (BPF.ar(in, 900, 1.5) * drive.lag(2) * 3).clip2(0.5) * 2;
-    var sig;
+    var sig, bass, kick;
     decap = LPF.ar(decap, tone.lag(2));
     burg = LPF.ar(HPF.ar(burg, 300), 3000);
     sig = LeakDC.ar(decap + (burg * burger)) * mix;
     sig = BPeakEQ.ar(sig, 100, 0.8, -6);   // warmth without boom in 70-150 Hz (reference match)
     sig = Compander.ar(sig, sig, 0.3, 1, 0.5, 0.005, 0.1);
-    Out.ar(busSpace, sig);
-    Out.ar(busSherman, sig * toSherman);
+    bass = sig[0..1] * (1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt));   // the bass grit ducks under the kick
+    kick = sig[2..3] * kgain;   // the kick's weight comes from its own harmonics, not the shared tape
+    Out.ar(busSpace, bass);
+    Out.ar(busRoom, (bass * room) + (kick * kroom));
+    Out.ar(busKickM, kick);
+    Out.ar(busSherman, (bass + kick) * toSherman);
   }),
 
   // DRUM BUS: one compressor across kick, hats and percussion (glue), then
   // gentle asymmetric saturation, then into the shared space.
-  SynthDef(\drumbus, { |thresh = 0.3, sat = 1.25|
+  SynthDef(\drumbus, { |thresh = 0.3, sat = 1.25, room = 0.22, duckAmt = 0.2|
     var in = In.ar(busDrums, 2);
     var kick = In.ar(busKick, 2);
     // the percussion is glued by its OWN level (the kick no longer pumps it)
     var sig = Compander.ar(in, in, thresh, 1, 1/3, 0.005, 0.12);
     sig = ((sig * sat) + 0.1).tanh - 0.1.tanh;
     sig = sig / (sat * (1 - 0.1.tanh.squared));
-    sig = sig + kick;
-    sig = BPeakEQ.ar(sig, 100, 1.0, -2.5);   // reference match: kick weight stays in the sub, not the boom
     sig = BPeakEQ.ar(sig, 200, 1.0, -1.5);   // drum bodies out of the low-mids
+    kick = BPeakEQ.ar(kick, 100, 1.0, -2.5);   // reference match: kick weight stays in the sub, not the boom
+    kick = BPeakEQ.ar(kick, 200, 1.0, -1.5);
+    sig = sig * (1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt));   // percussion breathes around the kick
     Out.ar(busSpace, sig);
+    Out.ar(busRoom, sig * room);
+    // the kick travels to the master on its own wire: it shares the room and
+    // the tape's character, but it never drives the saturators the rest of
+    // the mix goes through (that would turn everything down on every hit)
+    Out.ar(busKickM, kick);
   }),
 
   // Braam: root + octave + twelfth, three detuned saws each, DRIVEN BEFORE
@@ -483,6 +502,7 @@ defs = [
   SynthDef(\dverb, { |mix = 1|
     var in = HPF.ar(In.ar(busDverb, 2), 300);
     var sig = JPverb.ar(DelayN.ar(in, 0.02, 0.008), 0.9, 0.45, 0.6, 0.707, 0.1, 1.5, 1, 1, 0.7, 400, 7000);
+    sig = sig * (1 - (In.kr(ctlDuck).clip(0, 1) * 0.3));   // the plate ducks: the kick stays dry and clear
     Out.ar(busSpace, LPF.ar(sig, 8000) * mix);
   }),
 
@@ -492,7 +512,7 @@ defs = [
   // It also MOVES, slowly: the stereo image drifts, the tone drifts (low and
   // high shelves wander a few dB over tens of seconds) and the level
   // breathes. Nothing changes pitch.
-  SynthDef(\atmosbus, { |duckAmt = 0.3|
+  SynthDef(\atmosbus, { |duckAmt = 0.3, room = 0.25|
     var in = In.ar(busAtmos, 2);
     var duck = 1 - (In.kr(ctlDuck).clip(0, 1) * duckAmt);
     var sig = HPF.ar(in, 70);
@@ -507,11 +527,12 @@ defs = [
     sig = BHiShelf.ar(sig, 3000, 1, LFNoise2.kr(0.035).range(-4, 1.5));
     sig = sig * LFNoise2.kr(0.05).range(0.8, 1.05);
     Out.ar(busSpace, sig * duck);
+    Out.ar(busRoom, sig * duck * room);
   }),
 
   // BASS BUS: compression, distortion, mono below 150 Hz, and a heavy duck
   // under every kick so kick and bass punch through each other.
-  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.7|
+  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.85, room = 0.1|
     var in = In.ar(busLow, 2);
     var duckC = In.kr(ctlDuck).clip(0, 1);
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
@@ -529,7 +550,7 @@ defs = [
     hi = sig - lo;
     sig = (lo * (1 - (duckC * duckAmt))) + (hi * (1 - (duckC * 0.75)));
     mid = (sig[0] + sig[1]) * 0.5;
-    side = HPF.ar((sig[0] - sig[1]) * 0.5, 150);
+    side = HPF.ar((sig[0] - sig[1]) * 0.5, 160);
     sig = [mid + side, mid - side];
     // WIDE MID SATURATION (where mental tekno lives): the 250 Hz - 3.5 kHz band
     // is saturated separately left and right (different drive, micro-delays),
@@ -541,13 +562,16 @@ defs = [
       sig = sig + (LPF.ar(LPF.ar([l, r], 3400), 3400) * midSat);   // smooth, not fizzy
     }.value;
     Out.ar(busSpace, sig * 1.25);
+    Out.ar(busRoom, sig * 1.25 * room);
   }),
 
   // THE SHARED ROOM: every sound passes through the same short early
   // reflections and the same console saturation: one physical space.
-  SynthDef(\space, { |roomMix = 0.18, sat = 1.15|
+  SynthDef(\space, { |roomMix = 1, sat = 1.15|
     var in = In.ar(busSpace, 2);
-    var room = JPverb.ar(HPF.ar(in, 200), 0.55, 0.5, 0.5, 0.707, 0.1, 1.0, 1, 1, 0.8, 400, 7000);
+    // the room is a SEND/RETURN: every group sends its own amount (atmosphere
+    // most, drums some, bass little, the sub nothing), high-passed at 200 Hz
+    var room = JPverb.ar(HPF.ar(HPF.ar(In.ar(busRoom, 2), 200), 200), 0.55, 0.5, 0.5, 0.707, 0.1, 1.0, 1, 1, 0.8, 400, 7000);
     var sig = in + (room * roomMix);
     // saturate only above 120 Hz: the kick's sub must not squeeze what rides on top
     {
@@ -564,7 +588,8 @@ defs = [
   SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.12, exMix = 0.35,
       fade = 1, fadeTime = 3|
     var sig = In.ar(busMix, 2);
-    var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 120), 0.05, 0.045),
+    var kick = In.ar(busKickM, 2);
+    var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 160), 0.05, 0.045),
       8, 0.4, 2.6, 0.707, 0.3, 0.5, 1.0, 0.8, 0.5, 250, 4500);
     var d = drive.lag(5), w = wow.lag(5), mid, side, lo, md, hi, body, harsh;
     mid = (hall[0] + hall[1]) * 0.5;
@@ -572,9 +597,9 @@ defs = [
     hall = [mid + side, mid - side];
     sig = sig + (hall * hallMix.lag(4));
     sig = HPF.ar(sig, 24);
-    // lows below 120 Hz in mono: the kick and sub hit the center as one
+    // everything below 160 Hz in mono: the kick, sub and bass hit the center as one
     mid = (sig[0] + sig[1]) * 0.5;
-    side = HPF.ar((sig[0] - sig[1]) * 0.5, 120);
+    side = HPF.ar(HPF.ar((sig[0] - sig[1]) * 0.5, 160), 160);
     sig = [mid + side, mid - side];
     sig = sig + (HPF.ar(sig, 3000) * 0.5);
     {
@@ -583,7 +608,18 @@ defs = [
       thi = thi / (d * (1 - bias.tanh.squared));
       sig = tlo + thi;
     }.value;
-    sig = BPeakEQ.ar(sig, 1200, 0.7, 2);     // mental tekno lives in the mids
+    // the kick through its own tape stage: same drive and bias, no intermodulation
+    // with the rest of the mix
+    {
+      var k = HPF.ar(kick, 24), klo, khi;
+      k = k + (HPF.ar(k, 3000) * 0.5);
+      klo = LPF.ar(LPF.ar(k, 120), 120); khi = k - klo;
+      khi = ((khi * d) + bias).tanh - bias.tanh;
+      khi = khi / (d * (1 - bias.tanh.squared));
+      sig = sig + klo + khi;
+    }.value;
+    sig = BPeakEQ.ar(sig, 600, 0.7, 3.5);    // reference match: the mids carry this music
+    sig = BPeakEQ.ar(sig, 1200, 0.7, 2.5);   // mental tekno lives in the mids
     sig = BPeakEQ.ar(sig, 3500, 0.6, 4.5);   // reference match: presence (spikes are caught by the de-harsher)
     // RESONANCE CONTROL: narrow cuts only where root-tuned layers stack on the
     // same frequency (measured: 4x root sticks out +11 dB). The resonant
@@ -623,7 +659,7 @@ defs = [
     hi = HPF.ar(HPF.ar(sig, 3500), 3500);
     md = sig - lo - hi;
     lo = Compander.ar(lo, lo, 0.35, 1, 1/2, 0.02, 0.15);
-    md = Compander.ar(md, md, 0.4, 1, 1/2, 0.008, 0.15);    // catches spikes, not every kick
+    md = Compander.ar(md, md, 0.5, 1, 1/2, 0.008, 0.15);    // catches spikes, not every kick
     hi = Compander.ar(hi, hi, 0.2, 1, 1/2.5, 0.0015, 0.08);    // rounds off spiky highs, not every kick
     lo = (lo * loClip).tanh / loClip;        // kick clipping: unity for quiet lows, rounds only the kick's peaks
     sig = lo + md + hi;
@@ -737,7 +773,7 @@ score.add([0.0103, udel.newMsg(Group.basicNew(server, 1),
   [\in, busUdel, \tL, 0.311, \tR, 0.467, \fb, 0.25, \mix, 0.35, \hp, 400, \lp, 5000, \toSherman, 0], \addToTail)]);
 wdel = Synth.basicNew(\echo, server);   // screech echo: half note left, dotted half right
 score.add([0.01031, wdel.newMsg(Group.basicNew(server, 1),
-  [\in, busWdel, \tL, 8 * stepDur, \tR, 12 * stepDur, \fb, 0.45, \mix, 0.8, \hp, 80, \lp, 2200,
+  [\in, busWdel, \tL, 8 * stepDur, \tR, 12 * stepDur, \fb, 0.45, \mix, 0.8, \hp, 160, \lp, 2200,
    \toSherman, 0, \mute, on.("screech")], \addToTail)]);
 whd = Synth.basicNew(\echo, server);    // whale echo: long and unsynced, dark repeats into the hall
 score.add([0.01032, whd.newMsg(Group.basicNew(server, 1),
@@ -762,7 +798,7 @@ score.add([0.0114, bassbus.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 space = Synth.basicNew(\space, server);
 score.add([0.012, space.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 master = Synth.basicNew(\master, server);
-score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 0.97, \clip, 1.2,
+score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 0.88, \clip, 1.2,
   \resoF, root * [4, 6, 8, 9, 14, 40, 58, 65.4]], \addToTail)]);
 
 // ---------------------------------------------------------------------------

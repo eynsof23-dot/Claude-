@@ -99,8 +99,31 @@ a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
 - **Result:** every band of the peak section sits within the range of the
   two references.
 
+**v12 (the kick no longer squashes the mix):**
+- **Measured, not guessed.** Test tones at 237 Hz, 1 kHz, 4 kHz and 9.9 kHz
+  were mixed in, and the track was rendered with and without the kick. In
+  v11, every kick turned everything else down by about 6 dB. The cause was
+  not the limiter. The kick was driving the room's and the tape's
+  saturators, which everything else also passes through.
+- **The kick has its own wire to the master.** It goes through its own copy
+  of the tape (same drive and bias) and its own parallel saturation. It gets
+  the same character without dragging the rest down. What's left is about
+  1 dB of glue.
+- **Deliberate sidechain instead.** The bass sends, delays, Sherman,
+  percussion and drum plate duck under the kick by set amounts. The
+  atmosphere and bass already did.
+- **The room is a send/return.** Each group sends its own amount: atmosphere
+  0.25, drums 0.22, the kick's grit and FM 0.2, Sherman 0.18, delays 0.12,
+  bass 0.1, and the sub nothing. The hall is high-passed at 160 Hz, and
+  everything below 160 Hz is mono.
+- **Heavier kick.** More low saturation on the sub, more of the distortion
+  layer, and its own saturation 30% louder. A 600 Hz / 1.2 kHz lift brings
+  the mids back to the references.
+- **Result:** loud parts at -8.9 LUFS, peak -1 dBFS, crest 6.8-6.9 dB (the
+  references are at 6.7-6.9 dB). Mono-sum loss is 0.1 dB.
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
-120 Hz). Closed hats just right of centre, open hat left, ghost ticks
+160 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Rims left, wood blocks right, shaker right, anvil right, metal ticks
 far right, clank left, frame drums split low-left / high-right, triplet
 hand drums alternating. Cymbals, whales, chant, braams and the screech tails
