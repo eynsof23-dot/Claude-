@@ -57,7 +57,7 @@ var solo = "SOLO".getenv;
 var outPath = "OUT".getenv ? (thisProcess.nowExecutingPath.dirname +/+ "rite.wav");
 var bpm = 112, stepDur = 15 / bpm, bars = 84, total = bars * 16 * stepDur;
 var busSpace = 16, busHall = 18, busGrain = 20, busBass = 22, busMix = 24, ctlDuck = 10;
-var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44;
+var busSherman = 26, busKdel = 28, busDrums = 30, busDverb = 32, busAtmos = 34, busLow = 36, busUdel = 38, busSat = 40, busWdel = 42, busWhd = 44, busKick = 46;
 var busSdel = busBass;  // the old bass echo bus now carries the screech echo
 var opts, server, score, defs, add, set, on, pw, euclid, metalSpec, root, field, pick, at;
 var wdel, whd, satbus, lowP, ksat, bassbus, boomP, growlP, kdrive, ksend, kN = 0, kpA, kpB, kdistC, hatA, hatO, hatG, hatTone, udel, dverb, atmosbus, echo, kdel, sherman, drumbus, grainer, space, master, frame, tom, anvil, accent, cycle, cyclePeak, bassN = 0;
@@ -107,7 +107,7 @@ defs = [
     body = BPeakEQ.ar(body, 95, 1.0, -4);   // keep the weight in the sub, not the boom
     body = BPeakEQ.ar(body, 75, 0.9, -3);
     Out.kr(ctlDuck, EnvGen.kr(Env.perc(0.001, 0.28, 1, -3)));
-    Out.ar(busDrums, ((body * amp) ! 2) * (1 - mute));
+    Out.ar(busKick, ((body * amp) ! 2) * (1 - mute));   // own path: never pumps the drums
     Out.ar(busSherman, (fmSig * amp * sherman) ! 2);
     Out.ar(busKdel, (fmSig * amp * kdel) ! 2);
     Out.ar(busDverb, (fmSig * amp * 0.1) ! 2);
@@ -333,11 +333,14 @@ defs = [
   // gentle asymmetric saturation, then into the shared space.
   SynthDef(\drumbus, { |thresh = 0.3, sat = 1.25|
     var in = In.ar(busDrums, 2);
+    var kick = In.ar(busKick, 2);
+    // the percussion is glued by its OWN level (the kick no longer pumps it)
     var sig = Compander.ar(in, in, thresh, 1, 1/3, 0.005, 0.12);
-    sig = BPeakEQ.ar(sig, 100, 1.0, -2.5);   // reference match: kick weight stays in the sub, not the boom
-    sig = BPeakEQ.ar(sig, 200, 1.0, -1.5);   // drum bodies out of the low-mids
     sig = ((sig * sat) + 0.1).tanh - 0.1.tanh;
     sig = sig / (sat * (1 - 0.1.tanh.squared));
+    sig = sig + kick;
+    sig = BPeakEQ.ar(sig, 100, 1.0, -2.5);   // reference match: kick weight stays in the sub, not the boom
+    sig = BPeakEQ.ar(sig, 200, 1.0, -1.5);   // drum bodies out of the low-mids
     Out.ar(busSpace, sig);
   }),
 
@@ -546,14 +549,19 @@ defs = [
     var in = In.ar(busSpace, 2);
     var room = JPverb.ar(HPF.ar(in, 200), 0.55, 0.5, 0.5, 0.707, 0.1, 1.0, 1, 1, 0.8, 400, 7000);
     var sig = in + (room * roomMix);
-    sig = ((sig * sat) + 0.08).tanh - 0.08.tanh;
-    sig = sig / (sat * (1 - 0.08.tanh.squared));
+    // saturate only above 120 Hz: the kick's sub must not squeeze what rides on top
+    {
+      var lo = LPF.ar(LPF.ar(sig, 120), 120), hi = sig - lo;
+      hi = ((hi * sat) + 0.08).tanh - 0.08.tanh;
+      hi = hi / (sat * (1 - 0.08.tanh.squared));
+      sig = lo + hi;
+    }.value;
     Out.ar(busMix, sig);
   }),
 
   // Master: long hall (pre-delayed, widened), then the tape, a de-harsh EQ
   // for the 3-4 kHz zone, glue and a limiter.
-  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, bodyMix = 0.12, exMix = 0.35,
+  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.12, exMix = 0.35,
       fade = 1, fadeTime = 3|
     var sig = In.ar(busMix, 2);
     var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 120), 0.05, 0.045),
@@ -569,8 +577,12 @@ defs = [
     side = HPF.ar((sig[0] - sig[1]) * 0.5, 120);
     sig = [mid + side, mid - side];
     sig = sig + (HPF.ar(sig, 3000) * 0.5);
-    sig = ((sig * d) + bias).tanh - bias.tanh;
-    sig = sig / (d * (1 - bias.tanh.squared));
+    {
+      var tlo = LPF.ar(LPF.ar(sig, 120), 120), thi = sig - tlo;   // the tape saturates above 120 Hz
+      thi = ((thi * d) + bias).tanh - bias.tanh;
+      thi = thi / (d * (1 - bias.tanh.squared));
+      sig = tlo + thi;
+    }.value;
     sig = BPeakEQ.ar(sig, 1200, 0.7, 2);     // mental tekno lives in the mids
     sig = BPeakEQ.ar(sig, 3500, 0.6, 4.5);   // reference match: presence (spikes are caught by the de-harsher)
     // RESONANCE CONTROL: narrow cuts only where root-tuned layers stack on the
@@ -611,8 +623,9 @@ defs = [
     hi = HPF.ar(HPF.ar(sig, 3500), 3500);
     md = sig - lo - hi;
     lo = Compander.ar(lo, lo, 0.35, 1, 1/2, 0.02, 0.15);
-    md = Compander.ar(md, md, 0.25, 1, 1/2, 0.008, 0.15);
-    hi = Compander.ar(hi, hi, 0.13, 1, 1/2.5, 0.0015, 0.08);   // rounds off spiky highs
+    md = Compander.ar(md, md, 0.4, 1, 1/2, 0.008, 0.15);    // catches spikes, not every kick
+    hi = Compander.ar(hi, hi, 0.2, 1, 1/2.5, 0.0015, 0.08);    // rounds off spiky highs, not every kick
+    lo = (lo * loClip).tanh / loClip;        // kick clipping: unity for quiet lows, rounds only the kick's peaks
     sig = lo + md + hi;
     sig = sig * gain * Lag.kr(fade, fadeTime);
     sig = (sig * clip).tanh / clip.tanh;      // soft clipper: rounds the peaks before the limiter
@@ -627,7 +640,11 @@ defs = [
 score.add([0.0, ['/g_new', 1, 0, 0]]);
 defs.do { |d| score.add([0.0, ['/d_recv', d.asBytes]]) };
 
-on = { |layer| if(solo.isNil or: { solo == layer }) { 0 } { 1 } };
+// MUTE=layer1,layer2 silences layers (their sidechain/duck signals still run)
+on = { |layer|
+  var muted = ("MUTE".getenv ? "").split($,).includesEqual(layer);
+  if((solo.isNil or: { solo == layer }) and: { muted.not }) { 0 } { 1 }
+};
 add = { |time, name, args, layer|
   var s = Synth.basicNew(name, server);
   score.add([time, s.newMsg(Group.basicNew(server, 1), args ++ [\mute, on.(layer)], \addToHead)]);
@@ -745,7 +762,7 @@ score.add([0.0114, bassbus.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 space = Synth.basicNew(\space, server);
 score.add([0.012, space.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 master = Synth.basicNew(\master, server);
-score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 1.3, \clip, 1.2,
+score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 0.97, \clip, 1.2,
   \resoF, root * [4, 6, 8, 9, 14, 40, 58, 65.4]], \addToTail)]);
 
 // ---------------------------------------------------------------------------
