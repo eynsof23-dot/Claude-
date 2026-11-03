@@ -21,7 +21,28 @@ on a single 16th-note grid with polyrhythms.
 | 1:51 | **Conjuration.** The peak: industrial noise bed, tortured bowed metal, clank backbeat |
 | 2:43 | **Closing.** The beat leaves, echo tails, tolls; the tape wobbles and fades |
 
-Layers: `kick bass braam metal chant perc noise sub detritus grains`
+**Kick:** a clean sub tuned to the key, plus an FM layer. Only the FM layer
+goes through the Sherman filterbank and a tempo delay.
+
+**Bass:** each note rings a comb filter tuned to its pitch, driven until it
+screeches, with a clean sub underneath. Separate comb screeches sweep at
+phrase ends.
+
+**Sherman-style filterbank:** a driven resonant low-pass into a band-pass.
+The cutoff follows an envelope follower, a 7-sixteenth LFO and a random step
+on every 16th. It's fed the kick's FM layer, the comb-bass mids, the sparse
+percussion, the screeches and some hats. It never gets the subs, the chant
+or the soundscape.
+
+**Hats and sparse percussion:** offbeat and ghost hats, 16ths accented
+every 3, offbeat open hats; rims 3-in-16, wood blocks 2-in-7, zaps 1-in-12,
+glitch rolls at the ends of phrases.
+
+**Mix:** a drum bus with glue compression and saturation, sidechain ducking
+on the bass and screeches, lows below 120 Hz in mono, then the shared room,
+console saturation, tape and hall.
+
+Layers: `kick bass sherman hats sparse screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 
