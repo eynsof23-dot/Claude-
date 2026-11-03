@@ -1,26 +1,36 @@
 # soundscape
 
-A generative, dark, cinematic soundscape engine in plain C++17. It has no
-dependencies and no samples: every sound is synthesised from oscillators,
-noise and filters.
+A generative soundscape engine in plain C++17. It has no dependencies and no
+samples: every sound is synthesised from physical models, oscillators, noise
+and filters. Each run composes a new piece, which can be written to a WAV file
+or streamed live, endlessly.
 
-Each run composes a new piece. It has a key, a tempo and a full arc: a quiet
-opening, a long build, risers into booms and braams, a drum-driven climax, then
-the fall. Write it to a WAV file, or stream it live, endlessly.
+It has two styles:
+
+- **electroacoustic** (default). Acousmatic sound worlds made of struck,
+  scraped and bowed metal, glass and wood; prepared strings; granular clouds
+  that re-process what just happened; frozen instants; sounds that fly
+  through space; hard cuts into silence. There are no chords and no beat.
+- **cinematic.** Dark tonal film music: drone, pads, choir, braams, risers,
+  taiko, a pulsing ostinato.
 
 ```
-  seed 42  ·  E Harmonic minor  ·  87 BPM  ·  03:00
+  seed 1234  ·  electroacoustic  ·  03:00
 
-  [00:00]  section 1  [#.........] 0.06
-  [00:00]  chord Emadd9 (i)
-  [00:19]  section 2  [##........] 0.19  choir
-  [00:35]  riser (3s)
-  [00:38]  BOOM
-  [00:38]  section 3  [#####.....] 0.46  ostinato heartbeat choir
+  [00:00]  ── DUST    [###.......] arch  ·  harmonic series on 74 Hz, stretched x1.02
+  [00:00]  dust · glass
+  [00:00]  dust · wood
+  [00:04]  accelerando · glass
+  [00:05]  sweep up · approaching
+  [00:11]  bounce · glass
+  [00:34]  CUT ── METAL   [#####.....] falling  ·  odd partials of 79 Hz
+  [00:35]  rattling string
+  [00:35]  attack · string
+  [00:35]  bow · plate
+  [00:49]  scrape · plate
   ...
-  [01:25]  BOOM
-  [01:25]  BRAAM
-  [01:25]  section 5  [##########] 0.91  drums
+  [01:17]  ── SWARM   [########..] falling  ·  odd partials of 66 Hz
+  ...
 ```
 
 ## Build
@@ -31,17 +41,17 @@ g++ -std=c++17 -O2 -o soundscape src/main.cpp
 ```
 
 This works with GCC, Clang and MSVC on Linux, macOS and Windows. A 3-minute
-piece renders in about 7 seconds.
+piece renders in about 5 seconds.
 
 ## Use
 
 ```sh
-./soundscape                       # random 3-minute piece -> soundscape.wav
-./soundscape -s 42 -d 300          # seed 42, 5 minutes (same seed = same piece)
-./soundscape -o night.wav          # choose the file name
+./soundscape                          # electroacoustic, 3 minutes -> soundscape.wav
+./soundscape -s 1234 -d 300           # seed 1234, 5 minutes (same seed = same piece)
+./soundscape --style cinematic        # the film-music style
 ```
 
-**Listen live, forever** (the music changes key every few minutes):
+**Listen live, forever:**
 
 ```sh
 ./soundscape --raw | ffplay -f f32le -ar 48000 -ch_layout stereo -nodisp -   # ffmpeg (any OS)
@@ -51,87 +61,121 @@ piece renders in about 7 seconds.
 
 (Older ffmpeg versions use `-ac 2` instead of `-ch_layout stereo`.)
 
-**Hear one instrument at a time.** This is the best way to learn what each
-layer contributes:
+**Hear one layer at a time.** This is the best way to learn what each
+layer does:
 
 ```sh
-./soundscape -s 42 --solo pad
-./soundscape -s 42 --solo braam,booms,risers
-./soundscape -s 42 --mute wind,bells
+./soundscape -s 1234 --solo resonators
+./soundscape -s 1234 --solo grains,glitter
+./soundscape -s 1234 --mute sub,air
 ```
 
-Layers: `drone pad choir braam booms drums heartbeat risers bells wind ostinato`
+| Style | Layers |
+|---|---|
+| electroacoustic | `resonators strings grains glitter sweeps air sub` |
+| cinematic | `drone pad choir braam booms drums heartbeat risers bells wind ostinato` |
 
 **Export stems for your DAW.** The same seed always gives the same piece, so
 the solos line up sample for sample:
 
 ```sh
 mkdir -p stems
-for l in drone pad choir braam booms drums heartbeat risers bells wind ostinato; do
-  ./soundscape -q -s 42 --solo $l -o stems/$l.wav
+for l in resonators strings grains glitter sweeps air sub; do
+  ./soundscape -q -s 1234 --solo $l -o stems/$l.wav
 done
 ```
 
-Drag them in, then add your own melody, vocals or sound design on top. Each
-stem carries its own reverb tail. The master compressor reacts a little
+Each stem carries its own reverb. The master compressor reacts a little
 differently to each stem than to the full mix, so the summed stems won't
 match the mix exactly.
 
-## How it works
+## How the electroacoustic style works
 
 | File | What's in it |
 |---|---|
-| `src/dsp.hpp` | Oscillators, filters, envelopes, noise, delay lines |
-| `src/effects.hpp` | The hall reverb, ping-pong echo, bus compressor |
-| `src/harmony.hpp` | Chord progressions (a Markov chain over dark chords) |
+| `src/acoustic.hpp` | Physical models: materials, modal bodies, strings, exciters, spatial movement |
+| `src/textures.hpp` | Granulator (with its tape loop), noise sweeps, air, sub pressure |
+| `src/electroacoustic.hpp` | The composer: scenes, spectra, gestures, cuts |
+
+**Sound objects = exciter × body.** A body is a set of resonant modes
+measured from real objects: bar, plate, bowl, bell, glass, wood, skin.
+Their non-integer ratios are why they don't sound like "notes". An exciter
+is how energy goes in: *strike*, *bounce* (hits accelerating and fading
+like a dropped ball), *slowing taps*, *accelerando*, *scrape* (jagged
+friction with catches), *bow*, or *dust* (a fine rain of impulses). The
+same plate struck, scraped or bowed gives three very different sounds that
+still clearly belong to one object.
+
+**Prepared strings.** A Karplus-Strong waveguide that can slide in pitch
+mid-note, with a "rattle" that buzzes like a bolt on a piano string.
+
+**The tape.** Everything the objects play is recorded onto a 12-second
+loop. The granulator scatters 10–400 ms fragments of it, transposed,
+reversed, sliding an octave or thrown across the stereo field, so the
+piece keeps transforming its own material. *Freeze* stops the tape and the
+grains hover over one instant. *Glitter* grains are pure sines from the
+scene's spectrum.
+
+**Space.** Every object has a path: still, drifting, fly-by, approaching or
+receding. Distance makes a sound quieter, duller and wetter all at once,
+the way a real room does.
+
+**Scenes.** `METAL`, `DUST`, `BOWED`, `SWARM`, `STRINGS`, `VOID`. Each
+picks a *spectrum* (e.g. a stretched harmonic series on 58 Hz) and tunes
+every object to it. That's how things belong together without a key, the
+way spectralist composers work. Scenes follow an energy arc and have their
+own contour (rising, falling, arch). They either crossfade, or **cut**:
+everything chokes into silence, only the reverb tail survives, and the next
+world opens with an attack.
+
+## How the cinematic style works
+
+| File | What's in it |
+|---|---|
 | `src/layers.hpp` | The 11 instruments, each a commented sound-design recipe |
+| `src/harmony.hpp` | Chord progressions (a Markov chain over dark chords) |
 | `src/soundscape.hpp` | The conductor: form, orchestration, transitions, timing |
-| `src/main.cpp` | Command line, WAV writer, live streaming |
 
-One number drives everything: **intensity** (0 to 1). The conductor plans
-sections with an intensity arc, and every instrument reacts to it. Filters
-open, levels rise, chords change faster, the ostinato and drums come in.
+One number drives everything: **intensity** (0 to 1). Sections follow an
+arc, and every instrument reacts. Filters open, chords change faster, the
+ostinato and drums come in, and risers land on booms tuned to the key.
 
-## Sound-design recipes you can steal
+## Sound-design ideas you can steal
 
-Every recipe below is in `src/layers.hpp` with exact numbers, and can be
-rebuilt in Vital, Serum or any stock synth.
+**From the electroacoustic style:**
 
-- **Drone.** A sine one octave below the root, slightly saturated so it's
-  audible on small speakers, and kept *out* of the reverb. On top, two saws
-  detuned ±6 cents, one per ear, through a low-pass that slowly drifts.
-- **Dark pad.** 3 saws per note (left, centre, right, ±8 cents), with a
-  low-pass at 300 Hz when quiet and up to 2.5 kHz at the climax. Attack and
-  release of 4–9 s, so chords crossfade. Dark means *taking highs away*.
-- **Choir.** A saw (the vocal cords) through 3 band-pass filters at vowel
-  formants (a: 800/1150/2800 Hz). Morph the vowel slowly, and fade the
-  vibrato in after the note starts.
-- **Braam.** Low root + octave + fifth, many detuned saws, **distortion
-  before the filter**, then a resonant low-pass that snaps open and closes
-  over ~3 s.
-- **Boom.** A sine dropping 150 → 40 Hz in ~60 ms (an 808 is the same
-  idea), **tuned to the key**, plus a short noise burst for the attack.
-- **Riser.** Pink noise through a band-pass sweeping 180 Hz → 6 kHz with
-  rising resonance and an exponential volume curve. It **cuts dead** on the
-  impact.
-- **Bells.** FM with non-integer ratios (3.5, 1.41, 2.76) for inharmonic
-  metal. The modulation decays faster than the volume, so the tone starts
-  bright and fades to pure. Mostly echo and reverb.
-- **Ostinato.** 16th-note "filter pluck" bass: the cutoff jumps on every
-  note and snaps shut. Accents on a 3-3-2 grid give that restless film pulse.
-- **The room.** An 8-line feedback-delay reverb. High-pass its input
-  (reverb on sub = mud), damp the highs inside the loop (that's what makes it
-  "dark"), and modulate the delay times slightly.
-- **Harmony.** A drone that never leaves the root, with chords moving above
-  it: i → bVI, the Phrygian bII, chromatic mediants (Cm → Abm, Cm → E).
-  The friction against the pedal tone is the dread.
+- **Separate the exciter from the body.** In Vital or Serum: a noise or
+  impulse oscillator into a bank of resonant band-pass filters (or a
+  resonator / comb device) tuned to non-integer ratios. Change only the
+  noise envelope, and you go from a hit to a scrape to a bow.
+- **Doublets.** Two copies of every mode, a few cents apart. This is the
+  slow shimmer of real bells and bowls.
+- **Granulate your own output.** Resample what you just played and run it
+  through a granular device (Ableton Granulator, Portal, Quanta). Then
+  freeze it.
+- **Distance is three controls at once:** volume down, low-pass down,
+  reverb send up. Automate them together to move a sound away from you.
+- **Cut to silence.** A hard stop with the reverb tail left hanging hits
+  harder than any build-up.
+- **Tune everything to one spectrum.** Pick a low fundamental and use only
+  its (slightly stretched) partials for every sound in a section.
+
+**From the cinematic style:**
+
+- A sub sine kept *out* of the reverb, slightly saturated so small speakers
+  hear it.
+- Pads: 3 detuned saws per note, low-passed hard. Dark sound design means
+  *taking highs away*.
+- Braams: distortion *before* the filter, then a resonant low-pass that
+  snaps open and closes over ~3 s.
+- Booms tuned to the key; risers that cut dead on the impact.
 
 ## Tweaking
 
-Good places to start:
-
-- `Reverb::init` in `soundscape.hpp`: `7.5f` is the reverb length in
-  seconds, `1.6f` the room size, `3800.0f` the darkness.
-- `planMovement`: tempo range, section lengths, where the climax falls.
-- Level constants (`lvl`, `amp`) at the top of each layer's `render`.
-- `harmony.hpp`: the chord weights decide how strange the progressions get.
+- `grainParams()` in `electroacoustic.hpp`: grain density, length,
+  transpositions and reverse probability per scene.
+- The `gesture()` weights decide what happens in each scene. `kRate` sets
+  how often.
+- `material()` in `acoustic.hpp`: add your own material by listing mode
+  ratios.
+- Reverb: the `reverb_.init(...)` lines (length in seconds, size, darkness).

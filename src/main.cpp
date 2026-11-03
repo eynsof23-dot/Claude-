@@ -1,9 +1,10 @@
 // main.cpp — command line, WAV writer and live streaming.
 //
-//   soundscape                      render 3 minutes to soundscape.wav
-//   soundscape -s 42 -d 300         a specific 5-minute piece
-//   soundscape --raw | ffplay ...   endless, live (see README)
-//   soundscape --solo pad,choir     hear single layers to learn how they sound
+//   soundscape                          electroacoustic, 3 minutes -> soundscape.wav
+//   soundscape --style cinematic        the tonal, trailer-like style
+//   soundscape -s 42 -d 300             a specific 5-minute piece
+//   soundscape --raw | ffplay ...       endless, live (see README)
+//   soundscape --solo grains,glitter    hear single layers to learn how they sound
 
 #include <chrono>
 #include <csignal>
@@ -14,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "electroacoustic.hpp"
 #include "soundscape.hpp"
 
 #if defined(__SSE__) || defined(_M_X64)
@@ -88,10 +90,17 @@ class WavWriter {
   std::vector<unsigned char> buf_;
 };
 
+void printLayers(const char* style, const std::vector<const char*>& names) {
+  std::fprintf(stderr, "  %-16s", style);
+  for (const char* n : names) std::fprintf(stderr, "%s ", n);
+  std::fprintf(stderr, "\n");
+}
+
 void usage() {
   std::fprintf(stderr,
-               "soundscape — generative dark cinematic soundscapes\n\n"
+               "soundscape — generative dark soundscapes\n\n"
                "usage: soundscape [options]\n"
+               "      --style NAME     electroacoustic (default) or cinematic\n"
                "  -o, --out FILE       WAV file to write (default: soundscape.wav)\n"
                "  -d, --duration SEC   length in seconds (default: 180)\n"
                "  -s, --seed N         same seed = same piece (default: random)\n"
@@ -101,24 +110,27 @@ void usage() {
                "      --solo LIST      play only these layers (comma separated)\n"
                "      --mute LIST      silence these layers\n"
                "  -q, --quiet          don't print the score\n\n"
-               "layers: ");
-  for (int i = 0; i < kNumLayers; ++i) std::fprintf(stderr, "%s%s", layerName(i), i + 1 < kNumLayers ? " " : "\n");
+               "layers:\n");
+  printLayers("electroacoustic", Electroacoustic::layerNames());
+  printLayers("cinematic", Soundscape::layerNames());
 }
 
-bool parseLayers(const std::string& list, unsigned& mask) {
+bool parseLayers(const std::string& list, const std::vector<const char*>& names, unsigned& mask) {
   size_t start = 0;
   while (start <= list.size()) {
     size_t end = list.find(',', start);
     if (end == std::string::npos) end = list.size();
     std::string name = list.substr(start, end - start);
     bool found = false;
-    for (int i = 0; i < kNumLayers; ++i)
-      if (name == layerName(i)) {
+    for (size_t i = 0; i < names.size(); ++i)
+      if (name == names[i]) {
         mask |= 1u << i;
         found = true;
       }
     if (!found) {
-      std::fprintf(stderr, "unknown layer '%s'\n", name.c_str());
+      std::fprintf(stderr, "unknown layer '%s' for this style. Layers are:", name.c_str());
+      for (const char* n : names) std::fprintf(stderr, " %s", n);
+      std::fprintf(stderr, "\n");
       return false;
     }
     start = end + 1;
@@ -128,67 +140,8 @@ bool parseLayers(const std::string& list, unsigned& mask) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
-#if defined(__SSE__) || defined(_M_X64)
-  // Flush denormals to zero: decaying reverb tails otherwise become very slow.
-  _mm_setcsr(_mm_getcsr() | 0x8040);
-#endif
-
-  Soundscape::Options opt;
-  opt.seed = (uint64_t(std::random_device{}()) << 32) ^
-             uint64_t(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-  opt.seed %= 1000000;  // short seeds are easier to note down
-  std::string out = "soundscape.wav";
-  bool raw = false, durationGiven = false;
-  unsigned solo = 0, mute = 0;
-
-  for (int i = 1; i < argc; ++i) {
-    std::string a = argv[i];
-    auto value = [&]() -> std::string {
-      if (i + 1 >= argc) {
-        std::fprintf(stderr, "missing value for %s\n", a.c_str());
-        std::exit(2);
-      }
-      return argv[++i];
-    };
-    if (a == "-h" || a == "--help") {
-      usage();
-      return 0;
-    } else if (a == "-o" || a == "--out") {
-      out = value();
-    } else if (a == "-d" || a == "--duration") {
-      opt.duration = std::atof(value().c_str());
-      durationGiven = true;
-    } else if (a == "-s" || a == "--seed") {
-      opt.seed = std::strtoull(value().c_str(), nullptr, 10);
-    } else if (a == "--raw") {
-      raw = true;
-    } else if (a == "--rate") {
-      opt.sr = float(std::atof(value().c_str()));
-    } else if (a == "--solo") {
-      if (!parseLayers(value(), solo)) return 2;
-    } else if (a == "--mute") {
-      if (!parseLayers(value(), mute)) return 2;
-    } else if (a == "-q" || a == "--quiet") {
-      opt.log = false;
-    } else {
-      std::fprintf(stderr, "unknown option '%s'\n\n", a.c_str());
-      usage();
-      return 2;
-    }
-  }
-  if (opt.sr < 8000.0f || opt.sr > 192000.0f) {
-    std::fprintf(stderr, "sample rate must be between 8000 and 192000\n");
-    return 2;
-  }
-  if (raw && !durationGiven) opt.duration = 0.0;  // endless
-  if (!raw && opt.duration <= 0.0) {
-    std::fprintf(stderr, "duration must be positive\n");
-    return 2;
-  }
-  opt.muted = mute | (solo ? ~solo : 0u);
-
-  Soundscape scape(opt);
+template <class EngineT>
+int run(EngineT& scape, const EngineOptions& opt, bool raw, const std::string& out) {
   const int kChunk = 1024;
   std::vector<float> l(kChunk), r(kChunk), inter(kChunk * 2);
 
@@ -220,17 +173,110 @@ int main(int argc, char** argv) {
   }
   auto t0 = std::chrono::steady_clock::now();
   float peak = 0.0f;
+  uint64_t bad = 0;
   while (!scape.done()) {
     int n = int(std::min<uint64_t>(uint64_t(kChunk), scape.totalFrames() - scape.position()));
     scape.render(l.data(), r.data(), n);
-    for (int i = 0; i < n; ++i) peak = std::max(peak, std::max(std::fabs(l[size_t(i)]), std::fabs(r[size_t(i)])));
+    for (int i = 0; i < n; ++i) {
+      float a = std::fabs(l[size_t(i)]), b = std::fabs(r[size_t(i)]);
+      if (!std::isfinite(a) || !std::isfinite(b)) ++bad;
+      peak = std::max(peak, std::max(a, b));
+    }
     wav.write(l.data(), r.data(), n);
   }
   wav.close();
   double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
   std::fprintf(stderr, "\n  wrote %s  (%.0f s of audio in %.1f s, peak %.1f dBFS)\n", out.c_str(), opt.duration,
                secs, 20.0 * std::log10(double(peak) + 1e-12));
-  std::fprintf(stderr, "  replay this exact piece with:  soundscape -s %llu -d %g\n\n",
-               (unsigned long long)opt.seed, opt.duration);
+  bad += scape.invalidSamples();
+  if (bad) {
+    std::fprintf(stderr, "  WARNING: %llu invalid (NaN/inf) samples - please report this seed\n",
+                 (unsigned long long)bad);
+    return 3;
+  }
   return 0;
+}
+
+int main(int argc, char** argv) {
+#if defined(__SSE__) || defined(_M_X64)
+  // Flush denormals to zero: decaying reverb tails otherwise become very slow.
+  _mm_setcsr(_mm_getcsr() | 0x8040);
+#endif
+
+  EngineOptions opt;
+  opt.seed = (uint64_t(std::random_device{}()) << 32) ^
+             uint64_t(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+  opt.seed %= 1000000;  // short seeds are easier to note down
+  std::string out = "soundscape.wav", style = "electroacoustic", soloList, muteList;
+  bool raw = false, durationGiven = false;
+
+  for (int i = 1; i < argc; ++i) {
+    std::string a = argv[i];
+    auto value = [&]() -> std::string {
+      if (i + 1 >= argc) {
+        std::fprintf(stderr, "missing value for %s\n", a.c_str());
+        std::exit(2);
+      }
+      return argv[++i];
+    };
+    if (a == "-h" || a == "--help") {
+      usage();
+      return 0;
+    } else if (a == "--style") {
+      style = value();
+    } else if (a == "-o" || a == "--out") {
+      out = value();
+    } else if (a == "-d" || a == "--duration") {
+      opt.duration = std::atof(value().c_str());
+      durationGiven = true;
+    } else if (a == "-s" || a == "--seed") {
+      opt.seed = std::strtoull(value().c_str(), nullptr, 10);
+    } else if (a == "--raw") {
+      raw = true;
+    } else if (a == "--rate") {
+      opt.sr = float(std::atof(value().c_str()));
+    } else if (a == "--solo") {
+      soloList = value();
+    } else if (a == "--mute") {
+      muteList = value();
+    } else if (a == "-q" || a == "--quiet") {
+      opt.log = false;
+    } else {
+      std::fprintf(stderr, "unknown option '%s'\n\n", a.c_str());
+      usage();
+      return 2;
+    }
+  }
+  bool cinematic = style == "cinematic";
+  if (!cinematic && style != "electroacoustic" && style != "electro") {
+    std::fprintf(stderr, "unknown style '%s' (use electroacoustic or cinematic)\n", style.c_str());
+    return 2;
+  }
+  if (opt.sr < 8000.0f || opt.sr > 192000.0f) {
+    std::fprintf(stderr, "sample rate must be between 8000 and 192000\n");
+    return 2;
+  }
+  if (raw && !durationGiven) opt.duration = 0.0;  // endless
+  if (!raw && opt.duration <= 0.0) {
+    std::fprintf(stderr, "duration must be positive\n");
+    return 2;
+  }
+  std::vector<const char*> names = cinematic ? Soundscape::layerNames() : Electroacoustic::layerNames();
+  unsigned solo = 0, mute = 0;
+  if (!soloList.empty() && !parseLayers(soloList, names, solo)) return 2;
+  if (!muteList.empty() && !parseLayers(muteList, names, mute)) return 2;
+  opt.muted = mute | (solo ? ~solo : 0u);
+
+  int rc;
+  if (cinematic) {
+    Soundscape scape(opt);
+    rc = run(scape, opt, raw, out);
+  } else {
+    Electroacoustic scape(opt);
+    rc = run(scape, opt, raw, out);
+  }
+  if (!raw && rc == 0)
+    std::fprintf(stderr, "  replay this exact piece with:  soundscape --style %s -s %llu -d %g\n\n",
+                 cinematic ? "cinematic" : "electroacoustic", (unsigned long long)opt.seed, opt.duration);
+  return rc;
 }

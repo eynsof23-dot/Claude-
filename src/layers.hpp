@@ -176,7 +176,8 @@ class Pad {
         pan[k] = dsp::pan(kPan[k] + rng.range(-0.2f, 0.2f));
       }
       env.reset();
-      env.set(rng.range(4.0f, 7.0f), rng.range(6.0f, 9.0f), sr);
+      float att = rng.range(4.0f, 7.0f);
+      env.set(att, rng.range(6.0f, 9.0f), sr);
       env.on();
       drift.init(rng.next(), 3.0f, 9.0f);
       fL.reset();
@@ -273,7 +274,8 @@ class Choir {
       a.setPhase(rng.uni());
       b.setPhase(rng.uni());
       env.reset();
-      env.set(rng.range(3.0f, 5.0f), rng.range(5.0f, 7.0f), sr);
+      float att = rng.range(3.0f, 5.0f);
+      env.set(att, rng.range(5.0f, 7.0f), sr);
       env.on();
       vowel.init(rng.next(), 4.0f, 10.0f);
       pan = dsp::pan(rng.range(-0.6f, 0.6f));

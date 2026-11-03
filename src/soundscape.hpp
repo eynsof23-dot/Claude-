@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "effects.hpp"
+#include "engine.hpp"
 #include "harmony.hpp"
 #include "layers.hpp"
 
@@ -49,13 +50,12 @@ inline const char* layerName(int id) {
 
 class Soundscape {
  public:
-  struct Options {
-    uint64_t seed = 1;
-    float sr = 48000.0f;
-    double duration = 180.0;  // seconds; <= 0 means endless
-    unsigned muted = 0;       // bitmask of LayerId
-    bool log = true;
-  };
+  using Options = EngineOptions;
+  static std::vector<const char*> layerNames() {
+    std::vector<const char*> v;
+    for (int i = 0; i < kNumLayers; ++i) v.push_back(layerName(i));
+    return v;
+  }
 
   explicit Soundscape(const Options& o) : opt_(o), sr_(o.sr) {
     using dsp::mixSeed;
@@ -96,6 +96,7 @@ class Soundscape {
   bool done() const { return total_ > 0 && pos_ >= total_; }
   uint64_t position() const { return pos_; }
   uint64_t totalFrames() const { return total_; }
+  uint64_t invalidSamples() const { return 0; }
 
   void render(float* outL, float* outR, int frames) {
     int off = 0;
@@ -389,8 +390,12 @@ class Soundscape {
       int pc = rng_.chance(0.85f) ? c.pcs[size_t(rng_.irange(0, int(c.pcs.size()) - 1))]
                                   : (harm_.keyRoot() + scale[rng_.irange(0, 6)]) % 12;
       int note = 74 + (pc - 74 % 12 + 12) % 12 + (rng_.chance(0.35f) ? 12 : 0);
-      bells_.trigger(note, rng_.range(0.05f, 0.1f), rng_.range(3.0f, 8.0f), ratio, rng_.range(1.5f, 4.0f),
-                     rng_.range(-0.8f, 0.8f), int(float(j) * gap * sr_));
+      // one draw per statement: argument evaluation order differs between compilers
+      float v = rng_.range(0.05f, 0.1f);
+      float t60 = rng_.range(3.0f, 8.0f);
+      float index = rng_.range(1.5f, 4.0f);
+      float pn = rng_.range(-0.8f, 0.8f);
+      bells_.trigger(note, v, t60, ratio, index, pn, int(float(j) * gap * sr_));
     }
   }
 
