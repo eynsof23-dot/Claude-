@@ -24,25 +24,31 @@ on a single 16th-note grid with polyrhythms.
 **Kick:** a clean sub tuned to the key, plus an FM layer. Only the FM layer
 goes through the Sherman filterbank and a tempo delay.
 
-**Bass:** each note rings a comb filter tuned to its pitch, driven until it
-screeches, with a clean sub underneath. Separate comb screeches sweep at
-phrase ends.
+**Screeches:** resonant filters at the edge of self-oscillation, a fifth
+apart, swept slowly with vibrato into a tempo echo. They sing instead of
+hiss.
 
 **Sherman-style filterbank:** a driven resonant low-pass into a band-pass.
 The cutoff follows an envelope follower, a 7-sixteenth LFO and a random step
-on every 16th. It's fed the kick's FM layer, the comb-bass mids, the sparse
-percussion, the screeches and some hats. It never gets the subs, the chant
-or the soundscape.
+on every 16th. It's fed the kick's FM layer, the sparse percussion, some
+hats and the echo repeats. It never gets the subs, the chant or the
+soundscape.
 
-**Hats and sparse percussion:** offbeat and ghost hats, 16ths accented
-every 3, offbeat open hats; rims 3-in-16, wood blocks 2-in-7, zaps 1-in-12,
-glitch rolls at the ends of phrases.
+**Rhythm:** polymeters on the 16th grid (5-in-12, 3-in-16, 2-in-7, 1-in-12,
+4-in-9, 3-in-5, 3-in-8, accents every 3, 5 and 7) plus true polyrhythms:
+hand drums on triplet 8ths (3 against 4) and a metal pulse of 5 per bar
+(5 against 4).
 
-**Mix:** a drum bus with glue compression and saturation, sidechain ducking
-on the bass and screeches, lows below 120 Hz in mono, then the shared room,
-console saturation, tape and hall.
+**Mix:**
+- Drums go through a drum bus (glue compression and saturation) and a
+  short, tight plate. The plate is high-passed, so the kick's sub stays dry.
+- Atmospheres go through an atmosphere bus (EQ clean-up, slow compression,
+  a slight duck under the kick) and the long hall.
+- Then everything shares the same short room and console saturation.
+- On the master: tape, de-harsh EQ, 3-band multiband compression, mono
+  lows, limiter.
 
-Layers: `kick bass sherman hats sparse screech braam metal chant perc noise sub detritus grains`
+Layers: `kick sherman hats sparse screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 
