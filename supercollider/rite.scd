@@ -247,7 +247,7 @@ defs = [
     var freqs = [205.3, 304.4, 369.6, 522.7, 540, 800] * tone.linexp(0, 1, 1.0, 1.5);
     var sig = Mix(Pulse.ar(freqs, 0.5)) * 0.2;
     sig = BPF.ar(sig, 8500, 0.9) + (HPF.ar(WhiteNoise.ar, 7000) * 0.2);
-    sig = LPF.ar(HPF.ar(sig, 6000), 11000) * env * amp * 36;
+    sig = LPF.ar(HPF.ar(sig, 6000), 13500) * env * amp * 36;   // v16: a little more top
     sig = Pan2.ar(sig, pan);
     Out.ar(busDrums, sig * (1 - mute));
     Out.ar(busDverb, sig * dverb * (1 - mute));
@@ -360,24 +360,30 @@ defs = [
     Out.ar(busHall, sig * hall * (1 - mute));
   }),
 
-  // ANCIENT PAD (v15): a distant temple choir and harmonium. Open fifths and
-  // octaves on the root (4x, 6x, 8x, 12x: no thirds, nothing modern), each
-  // voice three detuned pulses, through vowel formants that drift slowly
-  // between "u", "o" and "a" (the timbre moves, the notes never do), a breath
-  // of noise in the formants, a slow tremolo. Dark: nothing above 3 kHz.
+  // ANCIENT PAD (v16): a warm drone ensemble, like a temple harmonium with
+  // voices. Five fixed voices on the root's harmonics: 4x, 6x, 8x, 9x and 12x
+  // (open fifths with a suspended 2nd: modal, old, no thirds, no modern
+  // chords). Each voice is three detuned saws plus a soft reed, breathing on
+  // its own slow cycle, placed in its own spot in the stereo field. A warm
+  // low-pass body plus broad vowel formants drifting between "o" and "a"
+  // (400-1300 Hz, the zone the bass leaves free), a breath of air in the
+  // reeds, gentle saturation. The notes never move; the colour does.
   SynthDef(\pad, { |freq = 49, amp = 0.2, atk = 6, sus = 10, rel = 8, hall = 0.6, mute = 0|
     var env = EnvGen.kr(Env.linen(atk, sus, rel, 1, \sin), doneAction: 2);
-    var notes = [4, 6, 8, 12] * freq, gains = [1, 0.8, 0.55, 0.3];
-    var sig = { |ch|
-      var src = Mix.fill(4, { |i| Mix(Pulse.ar(notes[i] * [0.996, 1, 1.0035] * (1 + (ch * 0.0015)), 0.4)) * gains[i] }) * 0.12;
-      var v = LFNoise2.kr(0.04 + (ch * 0.01)).range(0, 1);
-      var ex = src + PinkNoise.ar(0.12);
-      (BPF.ar(ex, v.linexp(0, 1, 330, 700), 0.14) * 3) + (BPF.ar(ex, v.linexp(0, 1, 700, 1150), 0.12) * 2)
-        + (BPF.ar(ex, 2400, 0.1) * 0.5) + (LPF.ar(src, 350) * 0.6)
-    } ! 2;
-    sig = [sig[0].value(0), sig[1].value(1)];
-    sig = LPF.ar((sig * 1.2).tanh, 3000) * (1 + (SinOsc.kr(0.17, [0, 1.3]) * 0.12)) * env * amp;
-    sig = HPF.ar(sig, 170);
+    var ratios = [4, 6, 8, 9, 12], gains = [1, 0.85, 0.6, 0.35, 0.18], pans = [-0.2, 0.35, -0.5, 0.6, 0.05];
+    var sig = Mix.fill(5, { |i|
+      var f = freq * ratios[i];
+      var saw = Mix(Saw.ar(f * [0.997, 1.0, 1.0028])) * 0.33;
+      var reed = Pulse.ar(f * 1.0012, 0.3) * 0.4;
+      Pan2.ar((saw + reed) * gains[i] * LFNoise2.kr(0.05 + (i * 0.013)).range(0.55, 1.0), pans[i])
+    }) * 0.25;
+    var vow = LFNoise2.kr(0.03).range(0, 1);
+    var form = (BPF.ar(sig, vow.linexp(0, 1, 550, 850), 0.9) * 1.4) + (BPF.ar(sig, vow.linexp(0, 1, 950, 1350), 0.9) * 0.85);
+    sig = (LPF.ar(sig, 1600) * 0.42) + form;   // v16: the vowels sit in the zone the bass leaves free (520-1420 Hz)
+    sig = sig + (BPF.ar(PinkNoise.ar(0.04 ! 2), 800, 1.0) * LFNoise2.kr(0.1).range(0.3, 1));
+    sig = LPF.ar((sig * 0.9).tanh, 3200);
+    sig = BPeakEQ.ar(BPeakEQ.ar(sig, freq * 12, 0.15, -4), freq * 24, 0.15, -5);   // no ringing partials (measured +10 dB)
+    sig = HPF.ar(sig, 150) * env * amp.lag(4);
     Out.ar(busAtmos, sig * (1 - mute));
     Out.ar(busHall, sig * hall * (1 - mute));
   }),
@@ -646,7 +652,7 @@ defs = [
     var in = HPF.ar(In.ar(busDverb, 2), 300);
     var sig = JPverb.ar(DelayN.ar(in, 0.02, 0.008), 0.9, 0.45, 0.6, 0.707, 0.1, 1.5, 1, 1, 0.7, 400, 7000);
     sig = sig * (1 - (In.kr(ctlDuck).clip(0, 1) * 0.3));   // the plate ducks: the kick stays dry and clear
-    Out.ar(busSpace, LPF.ar(sig, 8000) * mix);
+    Out.ar(busSpace, LPF.ar(sig, 10000) * mix);
   }),
 
   // ATMOS BUS: everything atmospheric. EQ clean-up (high-pass, a dip where
@@ -661,7 +667,7 @@ defs = [
     var sig = HPF.ar(in, 70);
     sig = BPeakEQ.ar(sig, 350, 1.0, -2.5);
     sig = BLowShelf.ar(sig, 200, 1, 2);    // weight
-    sig = BHiShelf.ar(sig, 6000, 1, -3);
+    sig = BHiShelf.ar(sig, 6000, 1, -1);   // v16: brighter (it was too dark next to the references)
     sig = Compander.ar(sig, sig, 0.2, 1, 0.5, 0.03, 0.4);
     // slow image drift as a BALANCE move (a rotator flips polarity at wide
     // angles, which hollows the atmosphere out in mono)
@@ -675,7 +681,7 @@ defs = [
 
   // BASS BUS: compression, distortion, mono below 150 Hz, and a heavy duck
   // under every kick so kick and bass punch through each other.
-  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 1.2, room = 0.1|
+  SynthDef(\bassbus, { |duckAmt = 0.95, sat = 2.0, midSat = 0.9, room = 0.2, carve = -5, rf = 245, rq = 0.1, rmix = 0, hall = 0.12|
     var in = In.ar(busLow, 2);
     var duckC = In.kr(ctlDuck).clip(0, 1);
     var sig = HPF.ar(HPF.ar(in, 55), 55);  // the kick owns everything below 55 Hz
@@ -685,7 +691,7 @@ defs = [
     sig = BPeakEQ.ar(sig, 180, 1.0, -1);
     sig = BPeakEQ.ar(sig, 135, 1.2, -2);     // v14: the kick's body (measured masking)
     sig = BPeakEQ.ar(sig, 280, 1.0, -1.5);   // keep the low-mids clean
-    sig = sig + ((LPF.ar(HPF.ar(sig, 150), 1200) * 2.5).tanh * 0.18);  // parallel mid grit: heard on phones
+    sig = sig + ((LPF.ar(HPF.ar(sig, 150), 520) * 2.5).tanh * 0.18);   // parallel grit, kept under 520 Hz (v16)
     sig = ((sig * sat) + 0.15).tanh - 0.15.tanh;
     sig = sig / (sat * (1 - 0.15.tanh.squared));
     // frequency-split sidechain: the lows get out of the kick's way completely,
@@ -703,10 +709,27 @@ defs = [
       var m = LPF.ar(HPF.ar(sig.sum * 0.5, 250), 3500);
       var l = ((DelayN.ar(m, 0.01, 0.003) * 2.3) + 0.2).tanh - 0.2.tanh;
       var r = ((DelayN.ar(m, 0.01, 0.005) * 2.6) + 0.15).tanh - 0.15.tanh;
-      sig = sig + (LPF.ar(LPF.ar([l, r], 3400), 3400) * midSat);   // smooth, not fizzy
+      sig = sig + (BPeakEQ.ar(LPF.ar(LPF.ar([l, r], 3400), 3400), 860, 1.0, -8) * midSat);   // smooth, not fizzy; v16: its grit lives around 520-1420 Hz, not in it
     }.value;
+    // v16: the 520-1420 Hz zone belongs to the atmosphere and textures: a broad
+    // dip there (measured: the bass held 46-62% of these frequencies)
+    // v16: SHERMAN-STYLE RESONANCE on the distorted bass. A driven resonant
+    // band-pass whose centre STEPS between fixed harmonics of the root (set
+    // from the score: per bar in the rite, per half bar in the conjuration,
+    // per beat in the peak), its sharpness and amount on their own cycles.
+    // A small wobble keeps it alive. It resonates different harmonics of
+    // the same note: the filter moves, the pitch never does.
+    {
+      var f = rf.lag(0.04) * (1 + (SinOsc.kr(1 / (15 / 110 * 7)) * 0.06));
+      var r = BPF.ar(HPF.ar(sig, 150), f, rq.lag(0.1)) * 6;
+      r = (r * 1.6).tanh + (BPF.ar((r * 3).tanh, f * 2, 0.3) * 0.3);
+      sig = sig + (r * rmix.lag(0.5));
+    }.value;
+    sig = BPeakEQ.ar(sig, 860, 1.0, carve.lag(2));
     Out.ar(busSpace, sig * 1.25);
     Out.ar(busRoom, sig * 1.25 * room);
+    // v16: space for the bass: its mids (never the sub) into the hall
+    Out.ar(busHall, HPF.ar(HPF.ar(sig, 250), 250) * hall);
   }),
 
   // THE SHARED ROOM: every sound passes through the same short early
@@ -729,12 +752,12 @@ defs = [
 
   // Master: long hall (pre-delayed, widened), then the tape, a de-harsh EQ
   // for the 3-4 kHz zone, glue and a limiter.
-  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.16, exMix = 0.45, dyn = 1,
+  SynthDef(\master, { |drive = 1.4, bias = 0.12, wow = 0.3, hiss = 0.002, hallMix = 0.8, gain = 1, clip = 1.5, loClip = 1.6, bodyMix = 0.16, exMix = 0.45, airMix = 0.35, dyn = 1,
       fade = 1, fadeTime = 3|
     var sig = In.ar(busMix, 2);
     var kick = In.ar(busKickM, 2);
     var hall = JPverb.ar(DelayN.ar(HPF.ar(In.ar(busHall, 2), 160), 0.05, 0.045),
-      8, 0.4, 2.6, 0.707, 0.3, 0.5, 1.0, 0.8, 0.5, 250, 4500);
+      8, 0.4, 2.6, 0.707, 0.3, 0.5, 1.0, 0.8, 0.7, 250, 7500);   // v16: brighter tails
     var d = drive.lag(5), w = wow.lag(5), mid, side, lo, md, hi, body, harsh, pre;
     mid = (hall[0] + hall[1]) * 0.5;
     side = (hall[0] - hall[1]) * 0.5 * 1.15;   // wide, but still safe in mono
@@ -782,20 +805,25 @@ defs = [
     harsh = Amplitude.kr(BPF.ar(sig.sum * 0.5, 2600, 0.6), 0.005, 0.1).ampdb
       - Amplitude.kr(sig.sum * 0.5, 0.005, 0.1).ampdb;
     sig = BPeakEQ.ar(sig, 2600, 0.6, ((harsh + 17).clip(0, 9)).neg.lag(0.02));
-    sig = BHiShelf.ar(sig, 9000, 1, -5.5);       // reference match: less air (above the presence zone)
+    sig = BHiShelf.ar(sig, 8000, 0.8, -1.5);     // v16: most of the air back (v15 was 4 dB darker than the references)
     // PRESENCE EXCITER: the 1.5-6 kHz band saturated in parallel; it adds the
     // dense upper harmonics distorted mids have in this music (not EQ hiss)
     {
       var ex = LPF.ar(HPF.ar(sig, 1500), 6000);
       ex = HPF.ar(LPF.ar((ex * 4).tanh, 6000), 2200);
       sig = sig + (ex * exMix);
+      // v16: AIR EXCITER: harmonics of what is already up there (hats, metal,
+      // distorted mids) above 6 kHz. Air from the sounds, not a noise bed.
+      ex = HPF.ar(sig, 3000);
+      ex = HPF.ar(HPF.ar((ex * 3).tanh, 6000), 6000);
+      sig = sig + (ex * airMix);
     }.value;
     sig = BPeakEQ.ar(sig, 320, 1.0, -2.5);   // make room in the low-mids
     sig = BPeakEQ.ar(sig, 250, 0.6, -1.5);   // broad: weight in the sub, not in the mud
 
     sig = DelayC.ar(sig, 0.03, 0.006 + (LFNoise2.kr(0.7) * 0.0012 * w) + (SinOsc.kr(5.8) * 0.00015 * w));
     sig = sig + HPF.ar(PinkNoise.ar(hiss.lag(5) ! 2), 1500);
-    sig = LPF.ar(sig, 12500);
+    sig = LPF.ar(sig, 16000);
     sig = LeakDC.ar(sig);
     pre = sig;   // for STEMS mode: everything before the master dynamics
     // 3-band (multiband / spectral) compression: lows, mids and highs are
@@ -811,7 +839,7 @@ defs = [
     sig = lo + md + hi;
     sig = sig * gain * Lag.kr(fade, fadeTime);
     sig = (sig * clip).tanh / clip.tanh;      // soft clipper: rounds the peaks before the limiter
-    sig = Limiter.ar(sig, 0.89, 0.01);   // ceiling -1 dBFS
+    sig = Limiter.ar(sig, 0.86, 0.01);   // ceiling -1.3 dBFS (v16: room for inter-sample peaks of the brighter top)
     sig = (sig * dyn) + (pre * gain * Lag.kr(fade, fadeTime) * (1 - dyn));   // STEMS mode: dynamics bypassed
     Out.ar(0, sig);
   })
@@ -971,7 +999,7 @@ score.add([0.0104, sherman.newMsg(Group.basicNew(server, 1),
   [\step, stepDur, \base, 250, \reso, 0.8, \drive, 4, \mix, 0.5, \mute, on.("sherman")], \addToTail)]);
 grainer = Synth.basicNew(\grainer, server);
 score.add([0.0106, grainer.newMsg(Group.basicNew(server, 1),
-  [\density, 2, \gdur, 0.3, \amp, 1.4, \spread, 0.05, \rev, 0.3, \mute, on.("grains")], \addToTail)]);
+  [\density, 2, \gdur, 0.3, \amp, 1.9, \spread, 0.05, \rev, 0.3, \mute, on.("grains")], \addToTail)]);
 dverb = Synth.basicNew(\dverb, server);
 score.add([0.0108, dverb.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 drumbus = Synth.basicNew(\drumbus, server);
@@ -983,7 +1011,7 @@ score.add([0.0114, bassbus.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 space = Synth.basicNew(\space, server);
 score.add([0.012, space.newMsg(Group.basicNew(server, 1), [], \addToTail)]);
 master = Synth.basicNew(\master, server);
-score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 0.86, \clip, 1.2, \dyn, if(stems) { 0 } { 1 },
+score.add([0.013, master.newMsg(Group.basicNew(server, 1), [\gain, 0.88, \clip, 1.2, \dyn, if(stems) { 0 } { 1 },
   \resoF, root * [4, 6, 8, 9, 14, 40, 58, 65.4]], \addToTail)]);
 
 // ---------------------------------------------------------------------------
@@ -1032,12 +1060,19 @@ add.(at.(76), \chant, [\freq, root * 2, \amp, 0.4, \atk, 4, \sus, 12, \rel, 6, \
 add.(at.(90), \chant, [\freq, root * 2.004, \amp, 0.3, \atk, 10, \sus, 26, \rel, 8, \overtone, 7, \pan, 0.2], "chant");
 add.(at.(114), \chant, [\freq, root * 2, \amp, 0.45, \atk, 6, \sus, 18, \rel, 12, \overtone, 8, \pan, 0, \hall, 0.8], "chant");
 
-// ANCIENT PADS (v15): a distant temple choir and harmonium, open fifths
-// on the root. In the void, the descent, under the second half of the peak
-// and in the closing.
-[[43.5, 6, 14, 7, 0.32], [76, 4, 14, 6, 0.32], [96, 10, 22, 6, 0.42], [112, 6, 18, 10, 0.3]].do { |p|
-  add.(at.(p[0]), \pad, [\freq, root, \atk, p[1], \sus, p[2], \rel, p[3], \amp, p[4]], "pad");
-};
+// ANCIENT PADS (v16): the drone ensemble enters under the rite at 0:52,
+// grows into the void, returns in the descent, under the second half of the
+// peak and in the closing.
+{
+  var p1, p3;
+  p1 = add.(at.(24), \pad, [\freq, root, \atk, 14, \sus, (28 * 16 * stepDur) - 22, \rel, 8, \amp, 1.75], "pad");
+  set.(at.(36), p1, [\amp, 2.25]);
+  set.(at.(44), p1, [\amp, 1.1]);   // the void: the pad in front, with the choir
+  add.(at.(76), \pad, [\freq, root, \atk, 4, \sus, (8 * 16 * stepDur) - 4, \rel, 6, \amp, 1.1], "pad");
+  p3 = add.(at.(96), \pad, [\freq, root, \atk, 2, \sus, (16 * 16 * stepDur) - 6, \rel, 6, \amp, 3.0], "pad");
+  set.(at.(98), p3, [\amp, 2.0]);   // forward in the drop, then under the peak
+  add.(at.(112), \pad, [\freq, root, \atk, 6, \sus, 18, \rel, 10, \amp, 1.25], "pad");
+}.value;
 
 // braams at the phrase doors (swells at 14, 40 and 80; the 40 one on the b2: dread)
 [[14, 1.5, 1], [28, 0.05, 1], [36, 0.05, 1], [40, 2.5, 1.0595], [52, 0.05, 1], [60, 0.05, 1], [68, 0.05, 1],
@@ -1089,13 +1124,14 @@ add.(at.(84), \noisewall, [\amp, 0.16, \atk, 10, \sus, (26 * 16 * stepDur) - 10,
 
 // detritus
 add.(at.(2), \detritus, [\amp, 0.45, \density, 3, \dur, 18 * 16 * stepDur], "detritus");
+add.(at.(20), \detritus, [\amp, 0.5, \density, 4, \dur, 24 * 16 * stepDur], "detritus");
 add.(at.(52), \detritus, [\amp, 0.4, \density, 5, \dur, 24 * 16 * stepDur], "detritus");
 add.(at.(86), \detritus, [\amp, 0.45, \density, 6, \dur, 28 * 16 * stepDur], "detritus");
 
 // TEMPLE (v15): the dark field texture, denser atmosphere through the whole
 // piece: [bar, bars, level, creaks]. Louder in the breaks, lower under the grooves.
-[[2, 18, 0.5, 0.6], [20, 24, 0.58, 0.4], [44, 8, 0.6, 1.0], [52, 24, 0.55, 0.5], [76, 8, 0.6, 1.0],
- [84, 28, 0.5, 0.6], [112, 12, 0.55, 0.8]].do { |t|
+[[2, 18, 0.5, 0.6], [20, 24, 0.9, 0.6], [44, 8, 0.7, 1.0], [52, 24, 0.8, 0.6], [76, 8, 0.7, 1.0],
+ [84, 28, 0.7, 0.7], [112, 12, 0.6, 0.8]].do { |t|
   add.(at.(t[0]), \temple, [\freq, root, \amp, t[2], \creak, t[3], \atk, 6, \sus, (t[1] * 16 * stepDur) - 6, \rel, 6], "temple");
 };
 
@@ -1115,8 +1151,27 @@ add.(at.(86), \detritus, [\amp, 0.45, \density, 6, \dur, 28 * 16 * stepDur], "de
   var peak = (bar >= 84) and: { bar < 112 };
   var closeK = (bar >= 112) and: { bar < 118 };   // the closing: the kick walks out
   var groove = rite or: { conj } or: { peak };
-  var hush = ((bar == 43) or: { bar == 75 }) and: { st >= 8 };
+  var drop = (bar >= 96) and: { bar < 98 };   // v16: a two-bar drop in the middle of the peak
+  var hush = (((bar == 43) or: { bar == 75 }) and: { st >= 8 }) or: { drop };
   var x = bar + (st / 16);
+
+  // BASS RESONANCE (v16): the Sherman-style filter on the bass bus steps
+  // between the root's harmonics (below 520 Hz, or above 1420 Hz in the peak:
+  // the 520-1420 Hz zone stays free for the atmosphere). Per bar in the rite,
+  // per half bar in the conjuration, per beat in the peak; colour cycles of
+  // 5, 7 and 3 steps so it never repeats the same way.
+  {
+    var resH = [5, 7, 4, 10, 6, 11, 8, 13, 9];   // the rite uses the first 5 (10x sits between the pad's 8x and 9x)
+    var every = if(rite) { 16 } { if(conj) { 8 } { 4 } };
+    if(groove and: { st % every == 0 } and: { hush.not }) {
+      var k = s div: every;
+      var f = root * resH[k % if(rite) { 5 } { if(conj) { 7 } { 9 } }];
+      if(peak and: { k % 7 == 6 }) { f = root * [32, 36][k % 2] };   // a scream above the free zone
+      set.(time, bassbus, [\rf, f, \rq, [0.08, 0.15, 0.05, 0.11, 0.06][k % 5],
+        \rmix, (if(rite) { 0.45 } { if(conj) { 0.6 } { 0.8 } }) * [1, 0.6, 0.85][k % 3]]);
+    };
+    if(drop and: { s % 16 == 0 }) { set.(time, bassbus, [\rmix, 0]) };
+  }.value;
 
   // kick: half-time in the procession (FM tok up front: that rhythm stays),
   // then POLYMETERS, never a straight four: 3-3-2-2 (10 steps) in the rite,
@@ -1200,7 +1255,7 @@ add.(at.(86), \detritus, [\amp, 0.45, \density, 6, \dur, 28 * 16 * stepDur], "de
   // GRIT: noisy percussion here and there. 3-in-11, only in the second half
   // of each 8-bar phrase, so the texture breathes over the phrase while the
   // floor stays the same. Colour cycles in 3s and 4s; never on the beat.
-  if(hush.not and: { inR.(\grit, bar) } and: { ph >= 4 } and: { gritP[s % 11] == 1 } and: { st % 4 != 0 }) {
+  if(hush.not and: { inR.(\grit, bar) } and: { (ph >= 4) or: { bar >= 104 } } and: { gritP[s % 11] == 1 } and: { st % 4 != 0 }) {
     var g = s div: 11;
     add.(time, \grit, [\freq, root * [8, 12, 16][g % 3], \amp, 0.6 * [1, 0.6, 0.8, 0.55][g % 4],
       \decay, [0.09, 0.2, 0.12, 0.3][g % 4], \crackle, [0.3, 0.7, 0.5][g % 3], \comb, [0.4, 0.7][g % 2],
@@ -1271,7 +1326,7 @@ add.(at.(86), \detritus, [\amp, 0.45, \density, 6, \dur, 28 * 16 * stepDur], "de
       var g = s div: 11;
       var args = [\freq, root * 2, \amp, 0.42, \dur, stepDur * [2, 4, 3, 6, 2][g % 5],
         \fmAmt, [1.2, 3.0, 2.0, 4.0, 1.6, 2.6, 3.4][g % 7], \cut, [550, 900, 700][g % 3],
-        \drive, pw.(x, [[24, 3.5], [52, 4], [84, 4.2], [104, 4.5]]), \sherman, 0.7, \dly, 0.08, \sat, [0.15, 0.4][g % 2],
+        \drive, pw.(x, [[24, 3.5], [52, 4], [84, 4.2], [104, 4.5]]), \sherman, 0.7, \dly, if(peak) { 0.16 } { 0.08 }, \sat, [0.15, 0.4][g % 2],
         \pan, 0];
       add.(time, \growl, args, "bass");
       if(g % 4 == 3) { add.(time + (2 * stepDur), \growl, args ++ [\amp, 0.3, \pan, 0], "bass") };
@@ -1303,7 +1358,7 @@ add.(at.(86), \detritus, [\amp, 0.45, \density, 6, \dur, 28 * 16 * stepDur], "de
   if(inR.(\tom, bar) and: { tom[s % 8] == 1 } and: { hush.not }) {
     add.(time, \frame, [\freq, root * 7, \amp, 0.085, \decay, 0.8, \hard, 0.45, \pan, -0.1], "perc");
   };
-  [42, 74, 82].do { |rb|
+  [42, 74, 82, 96].do { |rb|
     if(((bar == rb) and: { st % 2 == 0 }) or: { (bar == (rb + 1)) and: { st < 8 } }) {
       add.(time, \frame, [\freq, root * 7, \amp, (x - rb).linlin(0, 1.5, 0.08, 0.2), \decay, 0.6, \hard, 0.5, \pdrop, 1.0,
         \pan, rrand(-0.2, 0.2)], "perc");
@@ -1405,6 +1460,9 @@ set.(at.(44), sherman, [\mix, 0.5, \base, 180, \reso, 0.85, \drive, 3]);
 set.(at.(52), sherman, [\base, 320, \reso, 0.9, \drive, 5, \lfoAmt, 0.2]);
 set.(at.(76), sherman, [\base, 200, \reso, 0.8, \drive, 3]);
 set.(at.(84), sherman, [\base, 300, \reso, 0.9, \drive, 5, \lfoAmt, 0.25]);
+[88, 92, 98, 100, 104, 108].do { |b, i|   // v16: the Sherman's centre moves every 4 bars in the peak
+  set.(at.(b), sherman, [\base, [420, 240, 360, 280, 460, 320][i], \reso, [0.92, 0.85, 0.9, 0.88, 0.93, 0.9][i]]);
+};
 set.(at.(112), sherman, [\base, 200, \reso, 0.7, \drive, 3]);
 set.(at.(112), master, [\drive, 1.5, \wow, 1.2, \hiss, 0.004]);
 set.(at.(118), master, [\wow, 2.2, \drive, 1.8, \hiss, 0.005]);

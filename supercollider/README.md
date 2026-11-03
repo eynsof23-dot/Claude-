@@ -265,6 +265,52 @@ a -1 dBFS limiter: loud parts at about -9.8 LUFS with a crest of about 9.3 dB
   - Mono loss 0.16 dB, peakiness 2.6-2.8 dB.
   - Pilot test: the kick moves the other tones by 2 dB at most.
 
+**v16 (the 520-1420 Hz zone freed, a real pad, a moving bass, the highs back):**
+- **The distorted bass was eating 520-1420 Hz.** It held 55-62% of that zone,
+  with the atmosphere at 7-10%.
+  - The bass bus now has a broad -5 dB dip at 860 Hz.
+  - Its wide mid saturation is carved there (-8 dB) and lowered (0.9).
+  - Its parallel grit stays under 520 Hz.
+  - Now the bass holds 18-24% of the zone and the atmosphere, pad and
+    textures hold 16-25%.
+- **A pad you can hear.** The v15 pad was 25-31 dB under the grooves and
+  came out as two thin partials.
+  - The new `pad` is a warm drone ensemble on 4x, 6x, 8x, 9x and 12x the
+    root (open fifths and a suspended 2nd). Detuned saws and reeds, each
+    voice breathing and placed in the stereo field.
+  - Broad vowel formants sit at 550-1350 Hz, in the zone the bass leaves
+    free. Notches stop its partials ringing.
+  - It's under the rite from 0:52 (about 15 dB under the mix), forward in the
+    void and the descent (6-8 dB under), under the peak and in the closing.
+- **The bass moves (Sherman-style).** A driven resonant band-pass on the bass
+  bus steps between fixed harmonics of the root:
+  - per bar in the rite, per half bar in the conjuration, per beat in the
+    peak, with screams at 32x/36x;
+  - its sharpness and amount run on cycles of 5 and 3, with a small wobble;
+  - the filter moves, the pitch never does. In the peak it lands on 11
+    different frequencies.
+- **Space for the bass.** Room 0.2, plus a hall send high-passed at 250 Hz
+  (the sub stays dry). The growl's echo doubles in the peak.
+- **After 2:40 there are more events.**
+  - A two-bar drop at 3:29: kick, bass and hats out, the pad forward, then a
+    tom roll back in.
+  - The Sherman's centre moves every 4 bars in the peak.
+  - The grit plays full phrases from 3:47.
+- **More atmosphere.** Temple up, grains up, and detritus through the rite.
+- **The highs back, from the sounds, not a noise bed.**
+  - The master's top shelf goes from -5.5 to -1.5 dB, and its low-pass opens
+    from 12.5 to 16 kHz.
+  - An air exciter (harmonics above 6 kHz of what's already above 3 kHz).
+  - Brighter hall and plate tails, and a little more top on the hats and
+    the atmosphere bus.
+  - Air at -30 dB (the refs' median is -31.2).
+- **Result:**
+  - Grooves at -8.1 to -8.6 LUFS, true peak -0.5 to -1.0 dBFS, crest
+    6.2-6.5 dB.
+  - Mono loss 0.16 dB.
+  - About 5 layers clearly audible at once.
+  - Presence spikes in the rite halved (575 to 292 per minute).
+
 **Stereo map:** kick, bass, screech body and sub in the centre (mono below
 160 Hz). Closed hats just right of centre, open hat left, ghost ticks
 right. Hand skin left, hollow log right, grit alternating left/right, shaker right, anvil right, metal ticks

@@ -69,6 +69,19 @@ ceremonial magick is happening".
   creaks, machine room). So are pads with an ancient vibe: open fifths,
   vowel formants, no modern chords.
 - **Length:** about 4:30.
+- **520-1420 Hz belongs to the atmosphere, pad and textures.** The distorted
+  bass must not own it: keep the bass bus carve. They noticed when the bass
+  held about 60% of that zone (v15).
+- **The bass moves through a resonant filter** stepping between the root's
+  harmonics, Sherman-style. It should never sit still on the same colour,
+  and it needs some space (room and hall on its mids, never the sub).
+- **Highs:** not as dark as v15 (they said "really dark, not much highs"),
+  and never a noise bed. Get the top from harmonics (exciters, saturation),
+  bright reverb tails and hats. Air around the references' median (-31 dB).
+- **Pads must be heard:** about 13-15 dB under the mix in the grooves, more in
+  the breaks.
+- **Stems:** deliver them as a folder (zipped) of 24-bit WAVs, rendered with
+  `STEMS=1`, all trimmed by the same amount, with the mastered mix included.
 
 **Mix rules:**
 - **Mental tekno lives in the mids.** Saturate the mids, avoid mud, never
