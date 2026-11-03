@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.10)
+project(soundscape CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+add_executable(soundscape src/main.cpp)
+if(MSVC)
+  target_compile_options(soundscape PRIVATE /W4)
+else()
+  target_compile_options(soundscape PRIVATE -Wall -Wextra)
+endif()
