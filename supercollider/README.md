@@ -29,8 +29,10 @@ the rite, 4-4-3-3 (14 steps) in the first half of the peak, straight four
 only at the climax. The bar downbeats are always anchored. The kick owns
 everything below 55 Hz.
 
-**Bass (sparse, fixed pitch, no sweeps):** distorted sub booms with a short
-comb ring (20-step cycle), FM growls (2-in-11) and drone swells. They all
+**Bass (sparse, root only, no sweeps):** distorted sub booms with a short
+comb ring (20-step cycle), FM growls (2-in-11) whose colour changes on 3-,
+5- and 7-hit cycles and occasionally doubles, low growls an octave under
+(3-in-13), and drone swells. They all
 run through a bass bus: high-pass at 55 Hz, compression, parallel mid grit
 (heard on phones), distortion, mono lows, and a heavy duck under the kick.
 
@@ -40,9 +42,21 @@ while noise, crackle and distortion grow. Nothing sweeps, so nothing shifts
 in pitch. It cuts on the downbeat, while the Sherman's resonance and drive
 swell in sync.
 
-**Hats:** sparse Euclidean cycles (closed 5-in-13, open 3-in-11, ghost
-3-in-7), with colour and length changing per step. Every pattern is fixed:
-there are no random hits.
+**Hats:** a hypnotic pulse on every 3rd sixteenth, with accents cycling in
+4s (it loops every 12 steps against the bar). Plus an open hat on a fixed
+off-step and a ghost tick before the downbeat. Every 8th bar they breathe
+out for half a bar. Every pattern is fixed: there are no random hits.
+
+**Parallel saturation send (the Decapitator / Hamburger / Sherman logic):**
+the kick (amount varying per step and building per section) and a little of
+the bass go into a parallel bus: warm low-shelf-pushed tube saturation with a
+dark tone filter, plus diode-style mid clipping. It's mixed under the clean
+signal, and part of it continues into the Sherman.
+
+**Tortured cymbals** at the doors of the piece: bowed, dense inharmonic
+modes, surging pressure, stick-slip chatter, a slight bend, saturation.
+**Whales**, sparse and far away: slow gliding calls through a flanger, the
+hall and the unsynced echo.
 
 **Space:** a short room for everything, a short plate for the drums, a long
 hall only for the atmospheres. Tempo echoes are used sparingly, and an
@@ -69,7 +83,7 @@ hand drums on triplet 8ths (3 against 4) and a metal pulse of 5 per bar
 - On the master: tape, de-harsh EQ, 3-band multiband compression, mono
   lows, limiter.
 
-Layers: `kick bass sherman hats sparse screech braam metal chant perc noise sub detritus grains`
+Layers: `kick bass cymbals whales sherman hats sparse screech braam metal chant perc noise sub detritus grains`
 
 ## ASH (`ash.scd`): 3:00
 
